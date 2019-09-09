@@ -37,7 +37,7 @@ def score_run(goals, results):
             if res_src in goals and res_dst in goals[res_src]:
                 achieved = results[res_src][res_dst]
                 goal = goals[res_src][res_dst]
-                score = min(1, achieved / goal)
+                score = min(1.0, achieved / goal)
                 scores[res_src].append(score)
 
     avg = {}

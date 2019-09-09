@@ -108,6 +108,9 @@ def main():
     print(f"   - {args.rounds} rounds to be played.")
     print(f"The output will be saved in {args.out}.")
 
+    if len(teams) > len(src_addr):
+        raise ValueError("There are more teams than source IPs!")
+
     confs = generate_all_configs(args.rounds, teams, src_addr, dst_addr,
                                  msg_size, args.dst_team)
     write_configs(confs, args.out)
