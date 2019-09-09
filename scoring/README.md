@@ -45,5 +45,9 @@ The average score for each round is computed as:
 
 ```
 avg_score = 1/N * sum_(0<=i<N) Min(1, (delivered[i] / goal[i]))
+```
 
+To test the scoring with an example, run the config generation and then:
+```
+python score_run.py test/config_round_0.csv test/result.csv
 ```
