@@ -96,7 +96,7 @@ ROUNDS = 2
 DST_PER_ROUND = 3
 TEAMS = "teams/teams_ids.csv"
 SOURCES = "infrastructure/src_addr"
-DESTINATIONS = "infrastructure/dst_addr"
+DESTINATIONS = "infrastructure/dst_addr.csv"
 CONFIGS = "configs/"
 
 @app.route("/manage")
