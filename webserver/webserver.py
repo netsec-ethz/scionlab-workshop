@@ -2,6 +2,7 @@
 
 import datetime
 import os
+import csv
 from hashlib import sha256
 
 from flask import Flask
@@ -102,6 +103,10 @@ def get_teams():
         teams_str += "{:<20} {:>10}\n".format(team, id)
     teams_str += "\n"
     print(teams_str)
+    with open("teams/teams_ids.csv", 'w') as outfile:
+        writer = csv.writer(outfile)
+        for id, team in team_ids.items():
+            writer.writerow([team, id])
     return teams_str
 
 
