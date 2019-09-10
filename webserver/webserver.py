@@ -5,8 +5,12 @@ import datetime
 import os
 from hashlib import sha256
 
+
 from flask import Flask
 from flask import request, send_file
+
+from gen_configs import read_teamnames, read_src_addr, read_dst_addr, \
+    generate_all_configs, write_configs
 
 app = Flask(__name__)
 
@@ -18,7 +22,7 @@ team_ids = {}
 
 @app.route('/')
 def hello():
-    return "SCION workshop at VISCON!"
+    return "SCION-Lab workshop at VISCON!"
 
 
 def team_id(instring, length=6):
@@ -88,7 +92,12 @@ def _check_teamid(teamid):
 
 # Management commands
 MAN_SECRET = team_id("GO SCIONLAB", length=16)
-
+ROUNDS = 2
+DST_PER_ROUND = 3
+TEAMS = "teams/teams_ids.csv"
+SOURCES = "infrastructure/src_addr"
+DESTINATIONS = "infrastructure/dst_addr"
+CONFIGS = "configs/"
 
 @app.route("/manage")
 def get_management_token():
@@ -118,6 +127,30 @@ def toggle_signup():
     else:
         app.sign_up = True
         return "SIGNUP is now ENABLED"
+
+
+@app.route(f"/{MAN_SECRET}/config")
+def generate_configs():
+    teams, team_ids = read_teamnames(TEAMS)
+    src_addr = read_src_addr(SOURCES)
+    dst_addr, msg_size = read_dst_addr(DESTINATIONS)
+
+    print("There are:")
+    print(f"   - {len(teams)} teams;")
+    print(f"   - {len(src_addr)} source addresses;")
+    print(f"   - {len(dst_addr)} destination (sink) addresses;")
+    print(f"   - {DST_PER_ROUND} destinations for each team, each round;")
+    print(f"   - {ROUNDS} rounds to be played.")
+    print(f"The output will be saved in {CONFIGS}.")
+
+    if len(teams) > len(src_addr):
+        raise ValueError("There are more teams than source IPs!")
+
+    confs = generate_all_configs(ROUNDS, teams, src_addr, dst_addr,
+                                 msg_size, DST_PER_ROUND)
+    write_configs(confs, CONFIGS)
+    return "Configs written"
+
 
 
 if __name__ == '__main__':
