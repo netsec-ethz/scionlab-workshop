@@ -10,6 +10,7 @@ from flask import request, send_file
 app = Flask(__name__)
 
 SECRET = "NEXT RETREAT IN SINGAPORE"
+app.sign_up = False  # The platform allows signup
 teams = []
 team_ids = {}
 
@@ -25,6 +26,8 @@ def team_id(instring, length=6):
 
 @app.route('/signup/<teamname>', methods=['GET'])
 def signup(teamname):
+    if not app.sign_up:
+        return "Sorry, signing up is now disabled."
     if teamname in teams:
         return "Sorry, this name is already in use."
     new_team_id = team_id(teamname)
@@ -80,6 +83,36 @@ def _check_teamid(teamid):
     if teamid in team_ids:
         return True
     return False
+
+
+# Management commands
+MAN_SECRET = team_id("GO SCIONLAB", length=16)
+
+
+@app.route("/manage")
+def get_management_token():
+    print(f"The management secret is {MAN_SECRET}")
+    return f"This page is for management only"
+
+
+@app.route(f"/{MAN_SECRET}/teams")
+def get_teams():
+    teams_str = "\n"
+    for id, team in team_ids.items():
+        teams_str += "{:<20} {:>10}\n".format(team, id)
+    teams_str += "\n"
+    print(teams_str)
+    return teams_str
+
+
+@app.route(f"/{MAN_SECRET}/signup")
+def toggle_signup():
+    if app.sign_up:
+        app.sign_up = False
+        return "SIGNUP is now DISABLED"
+    else:
+        app.sign_up = True
+        return "SIGNUP is now ENABLED"
 
 
 if __name__ == '__main__':
