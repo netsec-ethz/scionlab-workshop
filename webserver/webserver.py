@@ -1,8 +1,8 @@
 """Webserver to handle teams and file submissions"""
 
+import csv
 import datetime
 import os
-import csv
 from hashlib import sha256
 
 from flask import Flask
