@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Webserver to handle teams and file submissions"""
 
 import csv
@@ -121,4 +122,4 @@ def toggle_signup():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=os.getenv('PORT', 5000))
