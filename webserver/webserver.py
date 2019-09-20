@@ -5,10 +5,8 @@ import datetime
 import os
 from hashlib import sha256
 
-
 from flask import Flask
 from flask import request, send_file
-
 from gen_configs import read_teamnames, read_src_addr, read_dst_addr, \
     generate_all_configs, write_configs
 
@@ -99,6 +97,7 @@ SOURCES = "infrastructure/src_addr"
 DESTINATIONS = "infrastructure/dst_addr.csv"
 CONFIGS = "configs/"
 
+
 @app.route("/manage")
 def get_management_token():
     print(f"The management secret is {MAN_SECRET}")
@@ -150,7 +149,6 @@ def generate_configs():
                                  msg_size, DST_PER_ROUND)
     write_configs(confs, CONFIGS)
     return "Configs written"
-
 
 
 if __name__ == '__main__':
