@@ -31,9 +31,10 @@ def signup(teamname):
     new_team_id = team_id(teamname)
     app.logger.info(f"New team {teamname} signed up! ID: {new_team_id}")
     # Create team folder
-    os.mkdir(f"teams/{teamname}")
-    os.mkdir(f"teams/{teamname}/code")
-    os.mkdir(f"teams/{teamname}/logs")
+    base_dir = os.path.join(TEAMS_DIR, teamname)
+    os.mkdir(base_dir)
+    os.mkdir(os.path.join(base_dir, CODE_SUBDIR))
+    os.mkdir(os.path.join(base_dir, LOGS_SUBDIR))
     return f"Welcome, {teamname}! Your ID is {new_team_id}"
 
 
@@ -47,7 +48,7 @@ def submit(teamid):
         # Save the submitted file to the appropriate folder
         fnm = submitted.filename
         out_name = datetime.datetime.now().strftime("%y%m%d%H%M%S") + f"-{fnm}"
-        submitted.save(f"teams/{teamname}/code/{out_name}")
+        submitted.save(os.path.join(TEAMS_DIR, teamname, CODE_SUBDIR, out_name))
         return "You successfully submitted the code!"
     return "Team ID not recognized. Please check it or sign up."
 
@@ -58,25 +59,19 @@ def get_logs(teamid):
     if check_teamid(teamid, team_ids):
         teamname = team_ids[teamid]
         app.logger.info(f"Checking logs from {teamname}")
-        team_log_dir = f"teams/{teamname}/logs"
+        team_log_dir = os.path.join(TEAMS_DIR, teamname, LOGS_SUBDIR)
         log = most_recent_timestamp(team_log_dir)
         if log:
-            return send_file(f"teams/{teamname}/logs/{log}", as_attachment=True)
+            return send_file(
+                os.path.join(TEAMS_DIR, teamname, LOGS_SUBDIR, log),
+                as_attachment=True)
         else:
             return "No logs found, sorry."
     return "Team ID not recognized. Please check it or sign up."
 
 
-
-
 # Management commands
 MAN_SECRET = team_id("MANAGEMENT_TOKEN", length=16)
-ROUNDS = 2
-DST_PER_ROUND = 3
-TEAMS = "configs/teams_ids.csv"
-SOURCES = "infrastructure/src_addr"
-DESTINATIONS = "infrastructure/dst_addr.csv"
-CONFIGS = "configs/"
 
 
 @app.route("/manage")
@@ -121,15 +116,15 @@ def generate_configs():
     print(f"   - {len(src_addr)} source addresses;")
     print(f"   - {len(dst_addr)} destination (sink) addresses;")
     print(f"   - {DST_PER_ROUND} destinations for each team, each round;")
-    print(f"   - {ROUNDS} rounds to be played.")
-    print(f"The output will be saved in {CONFIGS}.")
+    print(f"   - {NUM_ROUNDS} rounds to be played.")
+    print(f"The output will be saved in {CONFIGS_DIR}.")
 
     if len(teams) > len(src_addr):
         raise ValueError("There are more teams than source IPs!")
 
-    confs = generate_all_configs(ROUNDS, teams, src_addr, dst_addr,
+    confs = generate_all_configs(NUM_ROUNDS, teams, src_addr, dst_addr,
                                  msg_size, DST_PER_ROUND)
-    write_configs(confs, CONFIGS)
+    write_configs(confs, CONFIGS_DIR)
     return "Configs written"
 
 

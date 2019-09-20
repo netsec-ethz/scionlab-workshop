@@ -5,12 +5,8 @@ import os
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
-ROUNDS = 2
+NUM_ROUNDS = 2
 DST_PER_ROUND = 3
-TEAMS = "teams/teams_ids.csv"
-SOURCES = "infrastructure/src_addr"
-DESTINATIONS = "infrastructure/dst_addr.csv"
-CONFIGS = "configs/"
 
 # Directory structure
 TEAMS_DIR = "teams/"
@@ -20,8 +16,15 @@ INFRASTRUCTURE_DIR = "infrastructure/"
 SOURCE_SUBDIR = "source/"
 SINK_SUBDIR = "sink/"
 LOGS_SUBDIR = "logs/"
-CURRENT_ROUND = "rounds/cur-round/"
+CODE_SUBDIR = "code/"
+CUR_ROUND = "cur-round"
+
 LOGNAME = "log"
+
+TEAMS = os.path.join(CONFIGS_DIR, "teams_ids.csv")
+SOURCES = os.path.join(INFRASTRUCTURE_DIR, "src_addr")
+DESTINATIONS = os.path.join(INFRASTRUCTURE_DIR, "dst_addr.csv")
+CUR_ROUND_DIR = os.path.join(ROUNDS_DIR, CUR_ROUND)
 
 SECRET = os.getenv('SECRET', default="")
 
@@ -77,12 +80,12 @@ def prepare_round():
     cur_round = last_round + 1
 
     # Populate the cur-round folder with source/ and sink/ folders
-    os.mkdir(CURRENT_ROUND)
-    os.mkdir(os.path.join(CURRENT_ROUND, "source"))
-    os.mkdir(os.path.join(CURRENT_ROUND, "sink"))
+    os.mkdir(CUR_ROUND_DIR)
+    os.mkdir(os.path.join(CUR_ROUND_DIR, "source"))
+    os.mkdir(os.path.join(CUR_ROUND_DIR, "sink"))
 
     # Get the config with the teamname-source mappings.
-    config_name = f"configs/config_round_{cur_round}.csv"
+    config_name = os.path.join(CONFIGS_DIR, f"config_round_{cur_round}.csv")
     with open(config_name, 'r') as infile:
         reader = csv.reader(infile)
         for row in reader:
@@ -98,13 +101,15 @@ def move_code_to_source(teamname, source):
 
     The <teamname>.py file is the runnable file.
     """
-    team_code_dir = f"teams/{teamname}/code"
+    team_code_dir = os.path.join(TEAMS_DIR, teamname, CODE_SUBDIR)
     recent_code = most_recent_timestamp(team_code_dir)
     if recent_code is not None:
         # Copy the file over to the appropriate source
-        if not os.path.exists(os.path.join(CURRENT_ROUND, SOURCE_SUBDIR, source)):
-            os.makedirs(os.path.join(CURRENT_ROUND, SOURCE_SUBDIR, source))
-        dst = os.path.join(CURRENT_ROUND,
+        if not os.path.exists(os.path.join(CUR_ROUND_DIR,
+                                           SOURCE_SUBDIR,
+                                           source)):
+            os.makedirs(os.path.join(CUR_ROUND_DIR, SOURCE_SUBDIR, source))
+        dst = os.path.join(CUR_ROUND_DIR,
                            SOURCE_SUBDIR,
                            source,
                            f"{teamname}.py")
@@ -112,7 +117,7 @@ def move_code_to_source(teamname, source):
 
 
 def get_last_round_num():
-    round_names = os.listdir("rounds/")
+    round_names = os.listdir(ROUNDS_DIR)
     if not round_names:
         return -1
     cur_max = -1
@@ -132,7 +137,7 @@ def finish_round():
     last_round = get_last_round_num()
     cur_round = last_round + 1
     round_dir = os.path.join("rounds", f"round-{cur_round}")
-    os.rename(CURRENT_ROUND, round_dir)
+    os.rename(CUR_ROUND_DIR, round_dir)
     src_team = machine_to_team(cur_round)
 
     from pprint import pprint
