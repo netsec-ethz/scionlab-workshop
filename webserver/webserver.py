@@ -4,16 +4,15 @@
 import csv
 import datetime
 import os
-from hashlib import sha256
 
 from flask import Flask
 from flask import request, send_file
 from gen_configs import read_teamnames, read_src_addr, read_dst_addr, \
     generate_all_configs, write_configs
+from server_util import *
 
 app = Flask(__name__)
 
-SECRET = os.getenv('SECRET')
 app.sign_up = False  # The platform allows signup
 
 
@@ -22,73 +21,62 @@ def hello():
     return "SCION-Lab workshop at VISCON!"
 
 
-def team_id(instring, length=6):
-    return str(sha256(bytes(instring + SECRET, 'ascii')).hexdigest())[:length]
-
-
 @app.route('/signup/<teamname>', methods=['GET'])
 def signup(teamname):
     if not app.sign_up:
         return "Sorry, signing up is now disabled."
+    teams, team_ids = teams_from_dir()
     if teamname in teams:
         return "Sorry, this name is already in use."
     new_team_id = team_id(teamname)
     app.logger.info(f"New team {teamname} signed up! ID: {new_team_id}")
-    team_ids[new_team_id] = teamname
-    teams.append(teamname)
     # Create team folder
-    os.mkdir(f"teams/{new_team_id}")
-    os.mkdir(f"teams/{new_team_id}/code")
-    os.mkdir(f"teams/{new_team_id}/logs")
+    os.mkdir(f"teams/{teamname}")
+    os.mkdir(f"teams/{teamname}/code")
+    os.mkdir(f"teams/{teamname}/logs")
     return f"Welcome, {teamname}! Your ID is {new_team_id}"
 
 
 @app.route('/<teamid>/submit', methods=['POST'])
 def submit(teamid):
-    if _check_teamid(teamid):
-        app.logger.info(f"Submission from {teamid}")
+    _, team_ids = teams_from_dir()
+    if check_teamid(teamid, team_ids):
+        teamname = team_ids[teamid]
+        app.logger.info(f"Submission from {teamname}")
         submitted = request.files['upload']
         # Save the submitted file to the appropriate folder
         fnm = submitted.filename
         out_name = datetime.datetime.now().strftime("%y%m%d%H%M%S") + f"-{fnm}"
-        submitted.save(f"teams/{teamid}/code/{out_name}")
+        submitted.save(f"teams/{teamname}/code/{out_name}")
         return "You successfully submitted the code!"
     return "Team ID not recognized. Please check it or sign up."
 
 
 @app.route('/<teamid>/logs', methods=['GET'])
 def get_logs(teamid):
-    if _check_teamid(teamid):
-        app.logger.info(f"Checking logs from {teamid}")
-        log = _most_recent_log(teamid)
+    _, team_ids = teams_from_dir()
+    if check_teamid(teamid, team_ids):
+        teamname = team_ids[teamid]
+        app.logger.info(f"Checking logs from {teamname}")
+        team_log_dir = f"teams/{teamname}/logs"
+        log = most_recent_timestamp(team_log_dir)
         if log:
-            return send_file(f"teams/{teamid}/logs/{log}", as_attachment=True)
+            return send_file(f"teams/{teamname}/logs/{log}", as_attachment=True)
         else:
             return "No logs found, sorry."
     return "Team ID not recognized. Please check it or sign up."
 
 
-def _most_recent_log(teamid):
-    logdir = f"teams/{teamid}/logs"
-    most_recent = datetime.datetime.min
-    log = None
-    for cur in os.listdir(logdir):
-        timestr = cur.split("-", maxsplit=1)[0]
-        cur_time = datetime.datetime.strptime(timestr, '%y%m%d%H%M%S')
-        if cur_time > most_recent:
-            most_recent = cur_time
-            log = cur
-    return log
-
-
-def _check_teamid(teamid):
-    if teamid in team_ids:
-        return True
-    return False
 
 
 # Management commands
-MAN_SECRET = team_id(os.getenv('MAN_SECRET'), length=16)
+MAN_SECRET = team_id("MANAGEMENT_TOKEN", length=16)
+ROUNDS = 2
+DST_PER_ROUND = 3
+TEAMS = "configs/teams_ids.csv"
+SOURCES = "infrastructure/src_addr"
+DESTINATIONS = "infrastructure/dst_addr.csv"
+CONFIGS = "configs/"
 
 
 @app.route("/manage")
@@ -99,14 +87,15 @@ def get_management_token():
 
 @app.route(f"/{MAN_SECRET}/teams")
 def get_teams():
+    teams, team_ids = teams_from_dir()
     teams_str = "\n"
-    for id, team in team_ids.items():
+    for id, team in zip(team_ids, teams):
         teams_str += "{:<20} {:>10}\n".format(team, id)
     teams_str += "\n"
     print(teams_str)
-    with open("teams/teams_ids.csv", 'w') as outfile:
+    with open(TEAMS, 'w') as outfile:
         writer = csv.writer(outfile)
-        for id, team in team_ids.items():
+        for id, team in zip(team_ids, teams):
             writer.writerow([team, id])
     return teams_str
 
@@ -145,15 +134,21 @@ def generate_configs():
 
 
 @app.route(f"/{MAN_SECRET}/prepare_round")
-def prepare_round():
+def prepare():
     """Prepare the round folders with the code for each machine."""
-    pass
+    prepare_round()
+    return "Round preparation completed."
 
 
 @app.route(f"/{MAN_SECRET}/finish_round")
-def finish_round():
+def finish():
     """Clean up the round folders"""
+    finish_round()
+    return "Round finished."
 
 
 if __name__ == '__main__':
+    cleanup_dir(TEAMS_DIR)
+    cleanup_dir(ROUNDS_DIR)
+    cleanup_dir(CONFIGS_DIR)
     app.run(port=os.getenv('PORT', 5000))
