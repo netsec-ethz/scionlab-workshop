@@ -14,8 +14,6 @@ app = Flask(__name__)
 
 SECRET = "NEXT RETREAT IN SINGAPORE"
 app.sign_up = False  # The platform allows signup
-teams = []
-team_ids = {}
 
 
 @app.route('/')
@@ -149,6 +147,17 @@ def generate_configs():
                                  msg_size, DST_PER_ROUND)
     write_configs(confs, CONFIGS)
     return "Configs written"
+
+
+@app.route(f"/{MAN_SECRET}/prepare_round")
+def prepare_round():
+    """Prepare the round folders with the code for each machine."""
+    pass
+
+
+@app.route(f"/{MAN_SECRET}/finish_round")
+def finish_round():
+    """Clean up the round folders"""
 
 
 if __name__ == '__main__':
