@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Webserver to handle teams and file submissions"""
 
 import csv
@@ -12,7 +13,7 @@ from gen_configs import read_teamnames, read_src_addr, read_dst_addr, \
 
 app = Flask(__name__)
 
-SECRET = "NEXT RETREAT IN SINGAPORE"
+SECRET = os.getenv('SECRET')
 app.sign_up = False  # The platform allows signup
 
 
@@ -87,13 +88,7 @@ def _check_teamid(teamid):
 
 
 # Management commands
-MAN_SECRET = team_id("GO SCIONLAB", length=16)
-ROUNDS = 2
-DST_PER_ROUND = 3
-TEAMS = "teams/teams_ids.csv"
-SOURCES = "infrastructure/src_addr"
-DESTINATIONS = "infrastructure/dst_addr.csv"
-CONFIGS = "configs/"
+MAN_SECRET = team_id(os.getenv('MAN_SECRET'), length=16)
 
 
 @app.route("/manage")
@@ -161,4 +156,4 @@ def finish_round():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=os.getenv('PORT', 5000))
