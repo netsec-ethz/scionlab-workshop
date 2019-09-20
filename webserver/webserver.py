@@ -3,6 +3,7 @@
 
 import csv
 import datetime
+import logging
 import os
 
 from flask import Flask
@@ -12,6 +13,7 @@ from gen_configs import read_teamnames, read_src_addr, read_dst_addr, \
 from server_util import *
 
 app = Flask(__name__)
+app.logger.setLevel(logging.INFO)
 
 app.sign_up = False  # The platform allows signup
 
@@ -29,7 +31,7 @@ def signup(teamname):
     if teamname in teams:
         return "Sorry, this name is already in use."
     new_team_id = team_id(teamname)
-    app.logger.info(f"New team {teamname} signed up! ID: {new_team_id}")
+    app.logger.info(f"New team '{teamname}' signed up! ID: {new_team_id}")
     # Create team folder
     base_dir = os.path.join(TEAMS_DIR, teamname)
     os.mkdir(base_dir)
@@ -76,7 +78,7 @@ MAN_SECRET = team_id("MANAGEMENT_TOKEN", length=16)
 
 @app.route("/manage")
 def get_management_token():
-    print(f"The management secret is {MAN_SECRET}")
+    app.logger.info(f"The management secret is {MAN_SECRET}")
     return f"This page is for management only"
 
 
@@ -87,7 +89,7 @@ def get_teams():
     for id, team in zip(team_ids, teams):
         teams_str += "{:<20} {:>10}\n".format(team, id)
     teams_str += "\n"
-    print(teams_str)
+    app.logger.info(teams_str)
     with open(TEAMS, 'w') as outfile:
         writer = csv.writer(outfile)
         for id, team in zip(team_ids, teams):
@@ -111,13 +113,13 @@ def generate_configs():
     src_addr = read_src_addr(SOURCES)
     dst_addr, msg_size = read_dst_addr(DESTINATIONS)
 
-    print("There are:")
-    print(f"   - {len(teams)} teams;")
-    print(f"   - {len(src_addr)} source addresses;")
-    print(f"   - {len(dst_addr)} destination (sink) addresses;")
-    print(f"   - {DST_PER_ROUND} destinations for each team, each round;")
-    print(f"   - {NUM_ROUNDS} rounds to be played.")
-    print(f"The output will be saved in {CONFIGS_DIR}.")
+    app.logger.info("There are:")
+    app.logger.info(f"   - {len(teams)} teams;")
+    app.logger.info(f"   - {len(src_addr)} source addresses;")
+    app.logger.info(f"   - {len(dst_addr)} destination (sink) addresses;")
+    app.logger.info(f"   - {DST_PER_ROUND} destinations for each team, each round;")
+    app.logger.info(f"   - {NUM_ROUNDS} rounds to be played.")
+    app.logger.info(f"The output will be saved in {CONFIGS_DIR}.")
 
     if len(teams) > len(src_addr):
         raise ValueError("There are more teams than source IPs!")
@@ -146,4 +148,5 @@ if __name__ == '__main__':
     cleanup_dir(TEAMS_DIR)
     cleanup_dir(ROUNDS_DIR)
     cleanup_dir(CONFIGS_DIR)
-    app.run(port=os.getenv('PORT', 5000))
+    app.run(port=os.getenv('PORT', 5000), threaded=True)
+

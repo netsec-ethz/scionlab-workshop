@@ -51,6 +51,10 @@ sub_manage_teams(){
     curl "$SCION_ADDRESS/$MANAGE_TOKEN/teams"
 }
 
+sub_manage(){
+    curl "$SCION_ADDRESS/manage"
+}
+
 subcommand=$1
 
 case $subcommand in

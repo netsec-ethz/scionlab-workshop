@@ -40,11 +40,6 @@ def teams_from_dir():
     return teams, team_ids
 
 
-def generate_folder_structure():
-    """Clean up directories and regenerate the correct folder structure."""
-    pass
-
-
 def cleanup_dir(dir):
     """Remove all the contents in the directory"""
     if os.path.exists(dir):
