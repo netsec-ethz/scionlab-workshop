@@ -1,6 +1,6 @@
 .PHONY: all clean deps example
 
-all: capi sink
+all: deps capi sink
 
 clean:
 	rm -f scion_api.so sink
