@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -24,7 +25,7 @@ const PORT = 12345
 var localAddress *snet.Addr
 
 // scoreBoard is a map[addr.IA] = uint64
-var scoreBoard sync.Map
+var scoreBoard *sync.Map = new(sync.Map)
 
 type ScoreEntry struct {
 	Who        addr.IA
@@ -78,13 +79,14 @@ func handleClients(conn snet.Conn) {
 func handleScore(scoreChan chan ScoreEntry) {
 	for {
 		e := <-scoreChan
-		actual, found := scoreBoard.Load(e.Who)
+		board := scoreBoard
+		actual, found := board.Load(e.Who)
 		if !found {
 			actual = interface{}(uint64(0))
 		}
 		s := actual.(uint64)
 		s += e.NumPackets
-		scoreBoard.Store(e.Who, s)
+		board.Store(e.Who, s)
 	}
 }
 
@@ -102,9 +104,12 @@ func sendAck(conn snet.Conn, clientAddr *snet.Addr, message uint16) {
 }
 
 func dumpScoreBoard() {
+	board := scoreBoard
+	scoreBoard = new(sync.Map)
+	fmt.Println("dumping score now")
 	fileName := "/tmp/scores.txt"
 	lines := make([]byte, 0)
-	scoreBoard.Range(func(_ia, _n interface{}) bool {
+	board.Range(func(_ia, _n interface{}) bool {
 		ia := _ia.(addr.IA)
 		n := _n.(uint64)
 		lines = append(lines, ([]byte)(fmt.Sprintf("%s,%d\n", ia, n))...)
@@ -116,20 +121,39 @@ func dumpScoreBoard() {
 	}
 }
 
+func initHTTP() {
+	http.HandleFunc("/", httpHandler)
+	go func() {
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			fatal(err)
+		}
+	}()
+}
+
+func httpHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		dumpScoreBoard()
+		w.WriteHeader(http.StatusOK)
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
 func enableSigTermHandling() {
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGTERM)
+	signal.Notify(signals, syscall.SIGHUP)
 	go func() {
 		for {
 			<-signals
 			dumpScoreBoard()
-			os.Exit(0)
 		}
 	}()
 }
 
 func main() {
 	initNetwork()
+	initHTTP()
 	localAddress.Host.L4 = addr.NewL4UDPInfo(PORT)
 	conn, err := snet.ListenSCION("udp4", localAddress)
 	if err != nil {
