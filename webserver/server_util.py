@@ -18,6 +18,7 @@ SINK_SUBDIR = "sink/"
 LOGS_SUBDIR = "logs/"
 CODE_SUBDIR = "code/"
 CUR_ROUND = "cur-round"
+SUBMIT_NAME = "submit"
 
 LOGNAME = "log"
 
@@ -107,7 +108,7 @@ def move_code_to_source(teamname, source):
         dst = os.path.join(CUR_ROUND_DIR,
                            SOURCE_SUBDIR,
                            source,
-                           f"{teamname}.py")
+                           f"{SUBMIT_NAME}.py")
         copyfile(os.path.join(team_code_dir, recent_code), dst)
 
 

@@ -33,7 +33,7 @@ export TEAM_TOKEN=$TEAM_1
 ./scionlab.sh submit fakesubmission.py
 echo ""
 export TEAM_TOKEN=$TEAM_2
-./scionlab.sh submit fakesubmission.py
+#./scionlab.sh submit fakesubmission.py
 
 # Prepare the round
 echo ""
