@@ -38,7 +38,6 @@ export TEAM_TOKEN=$TEAM_2
 # Prepare the round
 echo ""
 ./scionlab.sh manage prepare
-sleep 10
 
 echo
 # Add some fake logs
@@ -49,3 +48,5 @@ done
 
 # Clear the round
 ./scionlab.sh manage finish
+
+rm fakesubmission.py
