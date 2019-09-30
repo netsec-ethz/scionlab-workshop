@@ -26,34 +26,18 @@ sub_logs(){
     curl "$SERVER/$TEAM_TOKEN/logs" > "$1"
 }
 
-sub_manage_signup(){
-    echo "Toggling signup"
-    curl "$SERVER/$MAN_SECRET/signup"
+
+sub_manage(){
+    if [[ "$1" =~ ^(signup|teams|config|prepare|finish)$ ]]; then
+        echo "Executing: manage $1"
+        curl "$SERVER/$MAN_SECRET/$1"
+    else
+        echo "Error: 'manage'_'$1' is not a known subcommand." >&2
+        echo "       Run '$ProgName --help' for a list of known subcommands." >&2
+        exit 1
+    fi
 }
 
-sub_manage_config(){
-    echo "Printing configs..."
-    curl "$SERVER/$MAN_SECRET/config"
-}
-
-sub_manage_finish(){
-    echo "Finishing round..."
-    curl "$SERVER/$MAN_SECRET/finish_round"
-}
-
-sub_manage_prepare(){
-    echo "Preparing round..."
-    curl "$SERVER/$MAN_SECRET/prepare_round"
-}
-
-sub_manage_teams(){
-    echo "Printing teams..."
-    curl "$SERVER/$MAN_SECRET/teams"
-}
-
-sub_manage_token(){
-    curl "$SERVER/manage"
-}
 
 subcommand=$1
 
@@ -64,13 +48,7 @@ case $subcommand in
 
     "manage")
         shift
-        subsubcommand=$1
-        sub_manage_${subsubcommand} $@
-        if [ $? = 127 ]; then
-            echo "Error: '$subcommand'_'$subsubcommand' is not a known subcommand." >&2
-            echo "       Run '$ProgName --help' for a list of known subcommands." >&2
-            exit 1
-        fi
+        sub_manage $@
         ;;
 
     *)
