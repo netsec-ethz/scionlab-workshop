@@ -130,14 +130,14 @@ def generate_configs():
     return "Configs written"
 
 
-@app.route(f"/{MAN_SECRET}/prepare_round")
+@app.route(f"/{MAN_SECRET}/prepare")
 def prepare():
     """Prepare the round folders with the code for each machine."""
     prepare_round()
     return "Round preparation completed."
 
 
-@app.route(f"/{MAN_SECRET}/finish_round")
+@app.route(f"/{MAN_SECRET}/finish")
 def finish():
     """Clean up the round folders"""
     finish_round()
