@@ -13,46 +13,46 @@ sub_help(){
 
 sub_signup(){
     echo "Signing up..."
-    curl $SCION_ADDRESS"/signup/$1"
+    curl $SERVER"/signup/$1"
 }
 
 sub_submit(){
     echo "Submitting: $1"
-    curl "$SCION_ADDRESS/$TEAM_TOKEN/submit" -X POST -F "upload=@$1"
+    curl "$SERVER/$TEAM_TOKEN/submit" -X POST -F "upload=@$1"
 }
 
 sub_logs(){
     echo "Getting last available log"
-    curl "$SCION_ADDRESS/$TEAM_TOKEN/logs" > "$1"
+    curl "$SERVER/$TEAM_TOKEN/logs" > "$1"
 }
 
 sub_manage_signup(){
     echo "Toggling signup"
-    curl "$SCION_ADDRESS/$MANAGE_TOKEN/signup"
+    curl "$SERVER/$MAN_SECRET/signup"
 }
 
 sub_manage_config(){
     echo "Printing configs..."
-    curl "$SCION_ADDRESS/$MANAGE_TOKEN/config"
+    curl "$SERVER/$MAN_SECRET/config"
 }
 
 sub_manage_finish(){
     echo "Finishing round..."
-    curl "$SCION_ADDRESS/$MANAGE_TOKEN/finish_round"
+    curl "$SERVER/$MAN_SECRET/finish_round"
 }
 
 sub_manage_prepare(){
     echo "Preparing round..."
-    curl "$SCION_ADDRESS/$MANAGE_TOKEN/prepare_round"
+    curl "$SERVER/$MAN_SECRET/prepare_round"
 }
 
 sub_manage_teams(){
     echo "Printing teams..."
-    curl "$SCION_ADDRESS/$MANAGE_TOKEN/teams"
+    curl "$SERVER/$MAN_SECRET/teams"
 }
 
 sub_manage_token(){
-    curl "$SCION_ADDRESS/manage"
+    curl "$SERVER/manage"
 }
 
 subcommand=$1

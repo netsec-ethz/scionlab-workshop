@@ -15,7 +15,6 @@ from server_util import *
 app = Flask(__name__)
 app.logger.setLevel(logging.INFO)
 
-SECRET = os.getenv('SECRET')
 app.sign_up = False  # The platform allows signup
 
 
@@ -74,7 +73,7 @@ def get_logs(teamid):
 
 
 # Management commands
-MAN_SECRET = team_id(os.getenv('MAN_SECRET'), length=16)
+MAN_SECRET = os.getenv('MAN_SECRET')
 
 
 @app.route("/manage")
