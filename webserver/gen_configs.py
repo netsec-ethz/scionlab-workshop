@@ -27,15 +27,19 @@ def parse_args():
     return args
 
 
-def read_teamnames(filename):
+def read_src_addr(filename):
     with open(filename, 'r') as infile:
         names = infile.readlines()
     names = [l.strip() for l in names]
     return names
 
 
-def read_src_addr(filename):
-    return read_teamnames(filename)
+def read_teamnames(filename):
+    with open(filename, 'r') as infile:
+        reader = csv.reader(infile)
+        t = [r for r in reader]
+    teamnames, team_ids = zip(*t)
+    return teamnames, team_ids
 
 
 def read_dst_addr(filename):
@@ -95,7 +99,7 @@ def main():
     random.seed(42)
 
     args = parse_args()
-    teams = read_teamnames(args.teams)
+    teams, team_ids = read_teamnames(args.teams)
     src_addr = read_src_addr(args.sources)
     dst_addr, msg_size = read_dst_addr(args.destinations)
 
