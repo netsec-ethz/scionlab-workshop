@@ -73,7 +73,7 @@ def get_logs(teamid):
 
 
 # Management commands
-MAN_SECRET = team_id("MANAGEMENT_TOKEN", length=16)
+MAN_SECRET = os.getenv('MAN_SECRET')
 
 
 @app.route("/manage")
