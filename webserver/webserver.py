@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Webserver to handle teams and file submissions"""
 
 import csv
@@ -10,7 +11,7 @@ from flask import request, send_file
 
 app = Flask(__name__)
 
-SECRET = "NEXT RETREAT IN SINGAPORE"
+SECRET = os.getenv('SECRET')
 app.sign_up = False  # The platform allows signup
 teams = []
 team_ids = {}
@@ -87,7 +88,7 @@ def _check_teamid(teamid):
 
 
 # Management commands
-MAN_SECRET = team_id("GO SCIONLAB", length=16)
+MAN_SECRET = team_id(os.getenv('MAN_SECRET'), length=16)
 
 
 @app.route("/manage")
@@ -121,4 +122,4 @@ def toggle_signup():
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=os.getenv('PORT', 5000))
