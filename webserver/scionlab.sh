@@ -51,7 +51,7 @@ sub_manage_teams(){
     curl "$SCION_ADDRESS/$MANAGE_TOKEN/teams"
 }
 
-sub_manage(){
+sub_manage_token(){
     curl "$SCION_ADDRESS/manage"
 }
 
@@ -61,6 +61,18 @@ case $subcommand in
     "" | "-h" | "--help")
         sub_help
         ;;
+
+    "manage")
+        shift
+        subsubcommand=$1
+        sub_manage_${subsubcommand} $@
+        if [ $? = 127 ]; then
+            echo "Error: '$subcommand'_'$subsubcommand' is not a known subcommand." >&2
+            echo "       Run '$ProgName --help' for a list of known subcommands." >&2
+            exit 1
+        fi
+        ;;
+
     *)
         shift
         sub_${subcommand} $@
