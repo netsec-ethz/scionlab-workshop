@@ -41,6 +41,8 @@ export TEAM_TOKEN=$TEAM_2
 # Prepare the round
 echo ""
 ./scionlab.sh manage prepare
+echo ""
+./scionlab.sh manage prepare
 
 echo
 # Add some fake logs

@@ -2,6 +2,7 @@
 import csv
 import datetime
 import os
+import shutil
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
@@ -24,7 +25,6 @@ SUBMIT_NAME = "submit"
 DEFAULT_PY = "# This is the default blank python script.\nprint('You " \
              "have not provided a valid submission yet!')\n"
 NULL_CODE = "print('Default code to make buildbot happy')\n"
-
 
 LOGNAME = "log"
 
@@ -82,6 +82,9 @@ def prepare_round():
     cur_round = last_round + 1
 
     # Populate the cur-round folder with source/ and sink/ folders
+    if os.path.exists(CUR_ROUND_DIR):
+        print(">> PREPARE ALREADY CALLED, REMOVING AND RE-PREPARING")
+        shutil.rmtree(CUR_ROUND_DIR)
     os.mkdir(CUR_ROUND_DIR)
     os.mkdir(os.path.join(CUR_ROUND_DIR, "source"))
     os.mkdir(os.path.join(CUR_ROUND_DIR, "sink"))
@@ -175,6 +178,7 @@ def finish_round():
         copyfile(os.path.join(round_dir, SOURCE_SUBDIR, cur_src, LOGNAME),
                  dst_path)
 
+
 def machine2team(cur_round):
     """Compute the map from teams to machines."""
     # Get the config with the teamname-source mappings.
@@ -185,7 +189,6 @@ def machine2team(cur_round):
         for row in reader:
             machine_team[row[1]] = row[0]
     return machine_team
-
 
 # def team2machine(cur_round):
 #     """Compute the map from machines to teams."""
