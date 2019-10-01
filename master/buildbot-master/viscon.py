@@ -11,40 +11,50 @@ from datetime import datetime
 from buildbot.plugins import *
 
 ####### CONSTANTS
-ROUND_TICK  = 120  # How often we run a round, in seconds.
+
+ROUND_TICK  =  30  # How often we run a round, in seconds.
                    # Drives the round-tick scheduler.
-PLAYER_TIME =  30  # How long the player code runs in each round, in seconds.
+PLAYER_TIME =  10  # How long the player code runs in each round, in seconds.
                    # Sets player running time.
 
-PLAYERS = ['p'+str(i) for i in range(1,3)]  # Player machines
-SINKS   = ['s'+str(i) for i in range(1,3)]  # Sink machines
+# TODO
+PLAYERS = [str(i) for i in [1,2,3]]  # Player machines
+SINKS   = [str(i) for i in [10,20,30,40]]  # Sink machines
 
-WEBSERVER = 'http://localhost:5000/'  # webserver API
+# communication with webserver
+WEBSERVER_BASEURL = 'http://{}/'.format(os.environ['SERVER'])
+WEBSERVER_MAN_SECRET = os.environ['MAN_SECRET']
+WEBSERVER_URL = WEBSERVER_BASEURL + WEBSERVER_MAN_SECRET
 # dir for sharing data with webserver
-DATADIR   = os.path.join(os.getcwd(), '../../webserver/curr_round')
+DATADIR   = os.path.join(os.getcwd(), '../../../webserver/rounds/cur-round')
 
+def webserver_dir(what, id):
+    return os.path.join(DATADIR, what, id)
+
+# communication with sinks
 SINK_HTTP_PORT = 9999  # used for stats reset signalling
+
 
 ####### WORKERS
 
+BUILDBOT_WORKERS_PASSWORD = os.environ['BUILDBOT_WORKERS_PASSWORD']
 # The 'workers' list defines the set of recognized workers. Each element is
 # a tuple of the shape (worker name, password).  The same
 # worker name and password must be configured on the worker.
-workers = ([('source-{}'.format(p), 'pass') for p in PLAYERS] +
-           [('sink-{}'.format(s),   'pass') for s in SINKS])
+workers = [('viscon-{}'.format(p), BUILDBOT_WORKERS_PASSWORD) for p in (PLAYERS+SINKS)]
 
 
 ####### ROUND/SCHEDULERS
 
 # As written in ../../README.md, a round is the following:
 
-# 1. Prepare round: tell webserver to prepare the files and wait for 200 OK.
+# 1. Prepare round
 start_round_sch = schedulers.Periodic(
     name='start-round',
     periodicBuildTimer=ROUND_TICK,
     builderNames=['start-round'],
 )
-# 2. Run players: for each source worker, download the player code from webserver to worker, run it, and collect logs.
+# 2. Run player code on source workers
 run_players_sch = schedulers.Dependent(
     name='start-players',
     upstream=start_round_sch,
@@ -57,7 +67,7 @@ collect_results_sch = schedulers.Dependent(
     builderNames=['collect-results-{}'.format(i) for i in SINKS],
 )
 
-# 4. Finish round: tell webserver to process and clean up the round files.
+# 4. Finish round
 finish_round_sch = schedulers.Dependent(
     name="finish-round",
     upstream=collect_results_sch,
@@ -73,12 +83,16 @@ schedulers = [
 
 ####### BUILDERS
 
+# The 'builders' list defines the Builders, which tell Buildbot how to perform a build:
+# what steps, and which workers can execute them.  Note that any particular build will
+# only take place on one worker.
+
 builders = []
 
 #### 1. Prepare round
 
 start_round_factory = util.BuildFactory()
-start_round_factory.addStep(steps.POST(WEBSERVER+'/prepare_round'))
+start_round_factory.addStep(steps.GET(WEBSERVER_URL+'/prepare'))
 
 builders += [util.BuilderConfig(
     name="start-round",
@@ -94,9 +108,9 @@ def player_factory_factory(player_id):
     player_factory = util.BuildFactory()
 
     nowstr     = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    source_dir = os.path.join(DATADIR, 'source', player_id)
-    code_file  = os.path.join(source_dir, 'code', 'submit.py')
-    log_file   = os.path.join(source_dir, 'log', nowstr+'.log')
+    source_dir = webserver_dir('source', player_id)
+    code_file  = os.path.join(source_dir, 'submit.py')
+    log_file   = os.path.join(source_dir, 'log')  # why not at least output.log or something
     run_cmd    = ['sh', '-c', 'python3 ./submit.py > ./output.log 2>&1']  # :D
 
     # 1. put the user's code on the worker
@@ -119,7 +133,7 @@ def player_factory_factory(player_id):
 builders += [
     util.BuilderConfig(
         name="run-player-{}".format(player_id),
-        workernames=["source-{}".format(player_id)],
+        workernames=["viscon-{}".format(player_id)],
         factory=player_factory_factory(player_id))
     for player_id in PLAYERS
 ]
@@ -128,23 +142,27 @@ builders += [
 
 def collect_results_factory_factory(sink_id):
     results_factory = util.BuildFactory()
-    sink_dir = os.path.join(DATADIR, 'sink', sink_id)
-    log_file = os.path.join(sink_dir, 'results.txt')
+    sink_file = os.path.join(DATADIR, 'sink', sink_id+'.txt')
+
     # I don't really want to do the POST from master, because then that would
     # require it to be network-accessible and I'm not sure if that's a good
     # idea given that the participants have access to the network and we don't
     # have any auth :D So... fuck it, gonna curl from localhost :D
     # results_factory.addStep(steps.POST())
     http_cmd = ['curl', '-X', 'POST', 'http://localhost:{}/'.format(SINK_HTTP_PORT)]
-    results_factory.addStep(steps.ShellCommand(command=http_cmd))
-    results_factory.addStep(steps.FileUpload(workersrc='./results.txt',  # TODO
-                                            masterdest=log_file))
+    # TODO enable when we have server
+    # results_factory.addStep(steps.ShellCommand(command=http_cmd))
+    # results_factory.addStep(steps.FileUpload(workersrc='./results.txt',  # TODO
+    #                                         masterdest=sink_file))
+    # create fake logs for now
+    results_factory.addStep(steps.FileUpload(workersrc='/etc/hosts',
+                                            masterdest=sink_file))
     return results_factory
 
 builders += [
     util.BuilderConfig(
         name="collect-results-{}".format(sink_id),
-        workernames=["sink-{}".format(sink_id)],
+        workernames=["viscon-{}".format(sink_id)],
         factory=collect_results_factory_factory(sink_id))
     for sink_id in SINKS
 ]
@@ -152,7 +170,7 @@ builders += [
 #### 4. Finish round
 
 finish_round_factory = util.BuildFactory()
-finish_round_factory.addStep(steps.POST(WEBSERVER+'/finish_round'))
+finish_round_factory.addStep(steps.GET(WEBSERVER_URL+'/finish'))
 
 builders += [util.BuilderConfig(
     name="finish-round",
