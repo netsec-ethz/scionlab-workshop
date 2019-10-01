@@ -28,7 +28,7 @@ var localAddress *snet.Addr
 var scoreBoard *sync.Map = new(sync.Map)
 
 type ScoreEntry struct {
-	Who        addr.IA
+	Who        string
 	NumPackets uint64
 }
 
@@ -68,8 +68,9 @@ func handleClients(conn snet.Conn) {
 		}
 		go handleClient(conn, buffer[:n], clientAddr)
 		// keeping score here? Use a channel, to be prepared for when this is multi-threaded
+		addr := fmt.Sprintf("%s,[%v]", clientAddr.IA, clientAddr.Host.L3)
 		scoreChan <- ScoreEntry{
-			Who:        clientAddr.IA,
+			Who:        addr,
 			NumPackets: uint64(n),
 		}
 	}
@@ -109,10 +110,10 @@ func dumpScoreBoard() {
 	fmt.Println("dumping score now")
 	fileName := "/tmp/scores.txt"
 	lines := make([]byte, 0)
-	board.Range(func(_ia, _n interface{}) bool {
-		ia := _ia.(addr.IA)
+	board.Range(func(_addr, _n interface{}) bool {
+		addr := _addr.(string)
 		n := _n.(uint64)
-		lines = append(lines, ([]byte)(fmt.Sprintf("%s,%d\n", ia, n))...)
+		lines = append(lines, ([]byte)(fmt.Sprintf("%s\t%d\n", addr, n))...)
 		return true
 	})
 	err := ioutil.WriteFile(fileName, lines, 0644)
