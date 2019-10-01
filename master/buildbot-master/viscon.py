@@ -5,7 +5,9 @@
 This file is imported by master.cfg to build the final buildbot config.
 """
 
+import csv
 import os
+import re
 from datetime import datetime
 
 from buildbot.plugins import *
@@ -17,16 +19,24 @@ ROUND_TICK  =  30  # How often we run a round, in seconds.
 PLAYER_TIME =  10  # How long the player code runs in each round, in seconds.
                    # Sets player running time.
 
-# TODO
-PLAYERS = [str(i) for i in [1,2,3]]  # Player machines
-SINKS   = [str(i) for i in [10,20,30,40]]  # Sink machines
+PLAYERS = {}
+SINKS   = {}
+
+with open('../worker_to_ssh.csv') as f:
+    for row in csv.reader(f):
+        if row[0].startswith('source-'):
+            PLAYERS[row[0]] = row[1:]
+        elif row[0].startswith('sink-'):
+            SINKS[row[0]] = row[1:]
+        else:
+            raise ValueError('wtf is {}'.format(row))
 
 # communication with webserver
 WEBSERVER_BASEURL = 'http://{}/'.format(os.environ['SERVER'])
 WEBSERVER_MAN_SECRET = os.environ['MAN_SECRET']
 WEBSERVER_URL = WEBSERVER_BASEURL + WEBSERVER_MAN_SECRET
 # dir for sharing data with webserver
-DATADIR   = os.path.join(os.getcwd(), '../../../webserver/rounds/cur-round')
+DATADIR   = os.path.join(os.getcwd(), '../../webserver/rounds/cur-round')
 
 def webserver_dir(what, id):
     return os.path.join(DATADIR, what, id)
@@ -41,7 +51,7 @@ BUILDBOT_WORKERS_PASSWORD = os.environ['BUILDBOT_WORKERS_PASSWORD']
 # The 'workers' list defines the set of recognized workers. Each element is
 # a tuple of the shape (worker name, password).  The same
 # worker name and password must be configured on the worker.
-workers = [('viscon-{}'.format(p), BUILDBOT_WORKERS_PASSWORD) for p in (PLAYERS+SINKS)]
+workers = [(p, BUILDBOT_WORKERS_PASSWORD) for p in (list(PLAYERS.keys())+list(SINKS.keys()))]
 
 
 ####### ROUND/SCHEDULERS
@@ -108,7 +118,7 @@ def player_factory_factory(player_id):
     player_factory = util.BuildFactory()
 
     nowstr     = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    source_dir = webserver_dir('source', player_id)
+    source_dir = webserver_dir('source', PLAYERS[player_id][0])
     code_file  = os.path.join(source_dir, 'submit.py')
     log_file   = os.path.join(source_dir, 'log')  # why not at least output.log or something
     run_cmd    = ['sh', '-c', 'python3 ./submit.py > ./output.log 2>&1']  # :D
@@ -133,7 +143,7 @@ def player_factory_factory(player_id):
 builders += [
     util.BuilderConfig(
         name="run-player-{}".format(player_id),
-        workernames=["viscon-{}".format(player_id)],
+        workernames=[player_id],
         factory=player_factory_factory(player_id))
     for player_id in PLAYERS
 ]
@@ -142,7 +152,7 @@ builders += [
 
 def collect_results_factory_factory(sink_id):
     results_factory = util.BuildFactory()
-    sink_file = os.path.join(DATADIR, 'sink', sink_id+'.txt')
+    sink_file = os.path.join(DATADIR, 'sink', SINKS[sink_id][0]+'.txt')
 
     # I don't really want to do the POST from master, because then that would
     # require it to be network-accessible and I'm not sure if that's a good
@@ -162,7 +172,7 @@ def collect_results_factory_factory(sink_id):
 builders += [
     util.BuilderConfig(
         name="collect-results-{}".format(sink_id),
-        workernames=["viscon-{}".format(sink_id)],
+        workernames=[sink_id],
         factory=collect_results_factory_factory(sink_id))
     for sink_id in SINKS
 ]

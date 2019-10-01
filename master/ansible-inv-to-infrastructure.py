@@ -22,9 +22,9 @@ def DEBUG(*args):
 
 def inv_to_infra(inv):
     """Generates source and sink infrastructure files for the webserver."""
-    src_addr_sz = {}  # source node SCION address => bandwidth factor
-    dst_addr_sz = {}  # sink node SCION address   => bandwidth factor
-    node_to_ssh = {}  # source node SCION address => user@hostname
+    src_addr_sz   = {}  # source node SCION address => bandwidth factor
+    dst_addr_sz   = {}  # sink node SCION address   => bandwidth factor
+    worker_to_ssh = {}  # source node SCION address => user@hostname
     for name, data in find_hosts(inv):
         if not 'scion_ia' in data: continue  # not a SCION node, ignore
         public_ip = data['ansible_host']
@@ -35,9 +35,10 @@ def inv_to_infra(inv):
         # everywhere :D
         src_addr_sz[scion_addr] = bw_factor
         dst_addr_sz[scion_addr] = bw_factor
-        node_to_ssh[scion_addr] = '{}@{}'.format(ANSIBLE_SSH_USER, public_ip)
+        worker_to_ssh['source-'+name] = (scion_addr, '{}@{}'.format(ANSIBLE_SSH_USER, public_ip))
+        worker_to_ssh['sink-'+name]   = (scion_addr, '{}@{}'.format(ANSIBLE_SSH_USER, public_ip))
 
-    return src_addr_sz, dst_addr_sz, node_to_ssh
+    return src_addr_sz, dst_addr_sz, worker_to_ssh
 
 def poor_mans_csv(data, filename, print_info=True):
     def fmt(x):
@@ -52,11 +53,11 @@ def poor_mans_csv(data, filename, print_info=True):
 
 def main():
     inv = yaml.safe_load(sys.stdin.read())
-    src_addr, dst_addr, node_to_ssh = inv_to_infra(inv)
+    src_addr, dst_addr, worker_to_ssh = inv_to_infra(inv)
 
     poor_mans_csv(src_addr.items(),    'src_addr.csv')
     poor_mans_csv(dst_addr.items(),    'dst_addr.csv')
-    poor_mans_csv(node_to_ssh.items(), 'node_to_ssh.csv')
+    poor_mans_csv([(a,n,v) for (a,(n,v)) in worker_to_ssh.items()], 'worker_to_ssh.csv')
 
 if __name__ == '__main__':
     main()
