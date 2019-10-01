@@ -25,6 +25,9 @@ def hello():
 
 @app.route('/signup/<teamname>', methods=['GET'])
 def signup(teamname):
+    if not valid_teamname(teamname):
+        return "This is not a valid team name, please conform to the" \
+               "regexp: [\\w]+$"
     if not app.sign_up:
         return "Sorry, signing up is now disabled."
     teams, team_ids = teams_from_dir()

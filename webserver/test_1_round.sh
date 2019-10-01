@@ -17,6 +17,9 @@ echo ""
 # Try to sign up the same team again, see that it fails
 echo ""
 ./scionlab.sh signup netsec_team
+# Try to sign up a team name with invalid characters
+echo ""
+./scionlab.sh signup ..\netsec-teams
 
 echo ""
 ./scionlab.sh manage signup

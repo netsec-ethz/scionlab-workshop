@@ -2,6 +2,7 @@
 import csv
 import datetime
 import os
+import re
 import shutil
 from hashlib import sha256
 from shutil import rmtree, copyfile
@@ -39,6 +40,11 @@ SECRET = os.getenv('SECRET', default="")
 def team_id(instring, length=6):
     return str(sha256(bytes(instring + SECRET, 'ascii')).hexdigest())[:length]
 
+
+def valid_teamname(teamname):
+    if re.match(r'[\w]+$', teamname):
+        return True
+    return False
 
 def teams_from_dir():
     """Read all the team names from the folders and generate team IDs."""
