@@ -9,7 +9,7 @@ WORKERS_CSV    = './worker_to_ssh.csv'
 WRKDIR         = '/tmp/buildbot-workers'
 
 
-@click.group()
+@click.group(chain=True)
 @click.option('--ssh/--no-ssh', default=False, help='Create remote workers (using ssh)')
 @click.option('--filename', default=WORKERS_CSV, help='CSV file with workers data')
 @click.option('--wrkdir', default=WRKDIR, help='Parent directory for worker data dirs')
@@ -19,7 +19,6 @@ WRKDIR         = '/tmp/buildbot-workers'
 def cli(ctx, ssh, filename, prompting, wrkdir):
     """Manage workers according to a workers.csv file"""
     ctx.ensure_object(dict)
-    print(prompting)
     with open(filename) as f:
         ctx.obj['ssh'] = ssh
         ctx.obj['wrkdir'] = wrkdir
@@ -33,40 +32,50 @@ def print_and_run(cmds, prompting=None):
         prompting = 'yes' if click.confirm('Run commands?') else 'dry'
     if prompting == 'yes':
         for cmd in cmds:
-            click.echo('>>> {}'.format(cmd))
+            click.secho('>>> {}'.format(cmd), fg='blue')
             subprocess.call(cmd, shell=True)
 
+def sshcmd(host, cmd):
+    if "'" in cmd: raise ValueError("refusing to escape quotes in \"{}\" (no way I'd get it right)".format(cmd))
+    return "ssh {} '{}'".format(host, cmd)
 
 @cli.command()
 @click.option('--passwd', prompt='Worker password', envvar='BUILDBOT_WORKERS_PASSWORD', help='Worker password')
+@click.option('--master', default='localhost', help='Buildbot master hostname[:port]')
 @click.pass_context
-def create(ctx, passwd):
-    if ctx.obj['ssh']: raise NotImplementedError('TODO :D')
+def create(ctx, passwd, master):
     wrkdir = ctx.obj['wrkdir']
+    ssh    = ctx.obj['ssh']
+    c = sshcmd if ssh else lambda h, cmd: cmd
 
     cmds = []
-    cmds.append('mkdir -p "{}"'.format(wrkdir))
+    if not ssh: cmds.append('mkdir -p "{}"'.format(wrkdir))
     for name, (scion_addr, host) in ctx.obj['workers'].items():
-
-        cmds.append('buildbot-worker create-worker "{mydir}" localhost {name} {passwd}'.format(
+        create = 'buildbot-worker create-worker "{mydir}" {master} {name} {passwd}'.format(
             mydir=os.path.join(wrkdir, 'worker-{}'.format(name)),
+            master=master,
             name=name,
             passwd=passwd,
-        ))
+        )
+        if ssh:
+            cmds.append(sshcmd(host, 'mkdir -p "{}"'.format(wrkdir) + ' && ' + create))
+        else:
+            cmds.append(create)
 
     print_and_run(cmds, ctx.obj['prompting'])
 
 @cli.command()
 @click.pass_context
 def start(ctx):
-    if ctx.obj['ssh']: raise NotImplementedError('TODO :D')
     wrkdir = ctx.obj['wrkdir']
+    ssh    = ctx.obj['ssh']
+    c = sshcmd if ssh else lambda h, cmd: cmd
 
     cmds = []
     for name, (scion_addr, host) in ctx.obj['workers'].items():
-        cmds.append('buildbot-worker start "{mydir}"'.format(
+        cmds.append(c(host, 'buildbot-worker start "{mydir}"'.format(
             mydir=os.path.join(wrkdir, 'worker-{}'.format(name)),
-        ))
+        )))
 
     print_and_run(cmds, ctx.obj['prompting'])
 
