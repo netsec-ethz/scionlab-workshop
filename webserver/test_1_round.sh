@@ -26,6 +26,9 @@ echo ""
 echo ""
 ./scionlab.sh manage config
 
+# Wait so that the timestamps are different
+sleep 1
+
 # Submit code for both teams
 echo ""
 touch fakesubmission.py
