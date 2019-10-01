@@ -26,6 +26,9 @@ echo ""
 echo ""
 ./scionlab.sh manage config
 
+# Wait so that the timestamps are different
+sleep 1
+
 # Submit code for both teams
 echo ""
 touch fakesubmission.py
@@ -33,9 +36,11 @@ export TEAM_TOKEN=$TEAM_1
 ./scionlab.sh submit fakesubmission.py
 echo ""
 export TEAM_TOKEN=$TEAM_2
-./scionlab.sh submit fakesubmission.py
+#./scionlab.sh submit fakesubmission.py
 
 # Prepare the round
+echo ""
+./scionlab.sh manage prepare
 echo ""
 ./scionlab.sh manage prepare
 

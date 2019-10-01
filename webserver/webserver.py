@@ -37,6 +37,10 @@ def signup(teamname):
     os.mkdir(base_dir)
     os.mkdir(os.path.join(base_dir, CODE_SUBDIR))
     os.mkdir(os.path.join(base_dir, LOGS_SUBDIR))
+    # Add a 'default' script to make buildbot happy
+    out_name = datetime.datetime.now().strftime("%y%m%d%H%M%S") + f"-DEFAULT.py"
+    with open(os.path.join(TEAMS_DIR, teamname, CODE_SUBDIR, out_name), 'w') as outfile:
+        outfile.write(DEFAULT_PY)
     return f"Welcome, {teamname}! Your ID is {new_team_id}"
 
 
