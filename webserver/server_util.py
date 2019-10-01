@@ -7,7 +7,7 @@ import shutil
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
-from gen_configs import read_src_addr
+from gen_configs import read_addr
 
 NUM_ROUNDS = 2
 DST_PER_ROUND = 3
@@ -30,7 +30,7 @@ NULL_CODE = "print('Default code to make buildbot happy')\n"
 LOGNAME = "log"
 
 TEAMS = os.path.join(CONFIGS_DIR, "teams_ids.csv")
-SOURCES = os.path.join(INFRASTRUCTURE_DIR, "src_addr")
+SOURCES = os.path.join(INFRASTRUCTURE_DIR, "src_addr.csv")
 DESTINATIONS = os.path.join(INFRASTRUCTURE_DIR, "dst_addr.csv")
 CUR_ROUND_DIR = os.path.join(ROUNDS_DIR, CUR_ROUND)
 
@@ -96,7 +96,7 @@ def prepare_round():
     os.mkdir(os.path.join(CUR_ROUND_DIR, "sink"))
 
     # Get the config with the teamname-source mappings.
-    all_sources = read_src_addr(SOURCES)
+    all_sources, _ = read_addr(SOURCES)
     config_name = os.path.join(CONFIGS_DIR, f"config_round_{cur_round}.csv")
     with open(config_name, 'r') as infile:
         reader = csv.reader(infile)

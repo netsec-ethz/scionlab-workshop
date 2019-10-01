@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """Webserver to handle teams and file submissions"""
 
-import csv
-import datetime
 import logging
-import os
 
 from flask import Flask
 from flask import request, send_file
-from gen_configs import read_teamnames, read_src_addr, read_dst_addr, \
-    generate_all_configs, write_configs
+
+from gen_configs import read_teamnames, read_addr, generate_all_configs, \
+    write_configs
 from server_util import *
 
 app = Flask(__name__)
@@ -42,7 +40,8 @@ def signup(teamname):
     os.mkdir(os.path.join(base_dir, LOGS_SUBDIR))
     # Add a 'default' script to make buildbot happy
     out_name = datetime.datetime.now().strftime("%y%m%d%H%M%S") + f"-DEFAULT.py"
-    with open(os.path.join(TEAMS_DIR, teamname, CODE_SUBDIR, out_name), 'w') as outfile:
+    with open(os.path.join(TEAMS_DIR, teamname, CODE_SUBDIR, out_name),
+              'w') as outfile:
         outfile.write(DEFAULT_PY)
     return f"Welcome, {teamname}! Your ID is {new_team_id}"
 
@@ -117,14 +116,15 @@ def toggle_signup():
 @app.route(f"/{MAN_SECRET}/config")
 def generate_configs():
     teams, team_ids = read_teamnames(TEAMS)
-    src_addr = read_src_addr(SOURCES)
-    dst_addr, msg_size = read_dst_addr(DESTINATIONS)
+    src_addr, src_size = read_addr(SOURCES)
+    dst_addr, dst_size = read_addr(DESTINATIONS)
 
     app.logger.info("There are:")
     app.logger.info(f"   - {len(teams)} teams;")
     app.logger.info(f"   - {len(src_addr)} source addresses;")
     app.logger.info(f"   - {len(dst_addr)} destination (sink) addresses;")
-    app.logger.info(f"   - {DST_PER_ROUND} destinations for each team, each round;")
+    app.logger.info(f"   - {DST_PER_ROUND} destinations for each team, each "
+                    f"round;")
     app.logger.info(f"   - {NUM_ROUNDS} rounds to be played.")
     app.logger.info(f"The output will be saved in {CONFIGS_DIR}.")
 
@@ -132,7 +132,7 @@ def generate_configs():
         raise ValueError("There are more teams than source IPs!")
 
     confs = generate_all_configs(NUM_ROUNDS, teams, src_addr, dst_addr,
-                                 msg_size, DST_PER_ROUND)
+                                 src_size, dst_size, DST_PER_ROUND)
     write_configs(confs, CONFIGS_DIR)
     return "Configs written"
 
@@ -156,4 +156,3 @@ if __name__ == '__main__':
     cleanup_dir(ROUNDS_DIR)
     cleanup_dir(CONFIGS_DIR)
     app.run(port=os.getenv('PORT', 5000), threaded=True)
-
