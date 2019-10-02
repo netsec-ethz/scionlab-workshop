@@ -231,7 +231,7 @@ def finish_round():
     # If there is no src entry in the scores, set the score to zero
     teamscores = {team: scores[src] if src in scores else 0 for src, team in
                   src2team.items()}
-
+    print(teamscores)
     # Send scores to influx
     _push_to_influxdb(teamscores, cur_round)
     return "Round finished and scores pushed"
