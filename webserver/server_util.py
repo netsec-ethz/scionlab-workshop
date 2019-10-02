@@ -28,6 +28,7 @@ CODE_SUBDIR = "code/"
 CUR_ROUND = "cur-round"
 SUBMIT_NAME = "submit"
 SCORE_FILE = "scores.txt"
+ROUND_CONFIG = "round.txt"
 # Default messages
 DEFAULT_PY = "# This is the default blank python script.\nprint('You " \
              "have not provided a valid submission yet!')\n"
@@ -114,12 +115,23 @@ def prepare_round():
         reader = csv.reader(infile)
         for row in reader:
             move_code_to_source(row[0], row[1])
+            _prepare_config_run(row[1], row[2], row[3])
             try:
                 all_sources.remove(row[1])  # Remove the machine from the list
             except ValueError:
                 print("Machine already considered")
     for leftover in all_sources:
         _create_empty_entry(leftover)
+
+
+def _prepare_config_run(src, dst, nbytes):
+    config_file = os.path.join(CUR_ROUND_DIR, SOURCE_SUBDIR, src, ROUND_CONFIG)
+    if os.path.exists(config_file):
+        with open(config_file, 'a') as outfile:
+            outfile.write(f"{dst} {nbytes}\n")
+    else:
+        with open(config_file, 'w') as outfile:
+            outfile.write(f"{dst} {nbytes}\n")
 
 
 def _create_empty_entry(source):
@@ -137,6 +149,13 @@ def _create_empty_entry(source):
                        f"{SUBMIT_NAME}.py")
     with open(dst, 'w') as outfile:
         outfile.write(NULL_CODE)
+
+    dst = os.path.join(CUR_ROUND_DIR,
+                       SOURCE_SUBDIR,
+                       source,
+                       f"{ROUND_CONFIG}")
+    with open(dst, 'w') as outfile:
+        outfile.write("\n")
 
 
 def move_code_to_source(teamname, source):
