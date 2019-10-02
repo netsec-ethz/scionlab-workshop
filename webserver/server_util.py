@@ -234,7 +234,7 @@ def _push_to_influxdb(teamscores, round_n):
     points = _create_point_list(teamscores, round_n)
     client = InfluxDBClient(INFLUX_ADDR, 8086, INFLUX_USER, INFLUX_PWD,
                             INFLUX_DB)
-    client.write(points)
+    client.write_points(points)
 
 
 def _create_point_list(teamscores, round_n):
