@@ -8,6 +8,8 @@ from collections import defaultdict
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
+from influxdb import InfluxDBClient
+
 from gen_configs import read_addr
 from scoring.score_run import load_goals, score_run
 
@@ -26,6 +28,7 @@ CODE_SUBDIR = "code/"
 CUR_ROUND = "cur-round"
 SUBMIT_NAME = "submit"
 SCORE_FILE = "scores.txt"
+ROUND_CONFIG = "round.txt"
 # Default messages
 DEFAULT_PY = "# This is the default blank python script.\nprint('You " \
              "have not provided a valid submission yet!')\n"
@@ -39,6 +42,11 @@ DESTINATIONS = os.path.join(INFRASTRUCTURE_DIR, "dst_addr.csv")
 CUR_ROUND_DIR = os.path.join(ROUNDS_DIR, CUR_ROUND)
 
 SECRET = os.getenv('SECRET', default="")
+
+INFLUX_USER = os.getenv("INFLUX_USER")
+INFLUX_PWD = os.getenv("INFLUX_PWD")
+INFLUX_DB = os.getenv("INFLUX_DB")
+INFLUX_ADDR = os.getenv("INFLUX_ADDR")
 
 
 def team_id(instring, length=6):
@@ -107,12 +115,23 @@ def prepare_round():
         reader = csv.reader(infile)
         for row in reader:
             move_code_to_source(row[0], row[1])
+            _prepare_config_run(row[1], row[2], row[3])
             try:
                 all_sources.remove(row[1])  # Remove the machine from the list
             except ValueError:
                 print("Machine already considered")
     for leftover in all_sources:
         _create_empty_entry(leftover)
+
+
+def _prepare_config_run(src, dst, nbytes):
+    config_file = os.path.join(CUR_ROUND_DIR, SOURCE_SUBDIR, src, ROUND_CONFIG)
+    if os.path.exists(config_file):
+        with open(config_file, 'a') as outfile:
+            outfile.write(f"{dst} {nbytes}\n")
+    else:
+        with open(config_file, 'w') as outfile:
+            outfile.write(f"{dst} {nbytes}\n")
 
 
 def _create_empty_entry(source):
@@ -130,6 +149,13 @@ def _create_empty_entry(source):
                        f"{SUBMIT_NAME}.py")
     with open(dst, 'w') as outfile:
         outfile.write(NULL_CODE)
+
+    dst = os.path.join(CUR_ROUND_DIR,
+                       SOURCE_SUBDIR,
+                       source,
+                       f"{ROUND_CONFIG}")
+    with open(dst, 'w') as outfile:
+        outfile.write("\n")
 
 
 def move_code_to_source(teamname, source):
@@ -205,8 +231,10 @@ def finish_round():
     # If there is no src entry in the scores, set the score to zero
     teamscores = {team: scores[src] if src in scores else 0 for src, team in
                   src2team.items()}
-
     print(teamscores)
+    # Send scores to influx
+    _push_to_influxdb(teamscores, cur_round)
+    return "Round finished and scores pushed"
 
 
 def machine2team(cur_round):
@@ -220,13 +248,29 @@ def machine2team(cur_round):
             machine_team[row[1]] = row[0]
     return machine_team
 
-# def team2machine(cur_round):
-#     """Compute the map from machines to teams."""
-#     # Get the config with the teamname-source mappings.
-#     config_name = f"configs/config_round_{cur_round}.csv"
-#     machine_team = {}
-#     with open(config_name, 'r') as infile:
-#         reader = csv.reader(infile)
-#         for row in reader:
-#             machine_team[row[0]] = row[1]
-#     return machine_team
+
+def _push_to_influxdb(teamscores, round_n):
+    points = _create_point_list(teamscores, round_n)
+    client = InfluxDBClient(INFLUX_ADDR, 8086, INFLUX_USER, INFLUX_PWD,
+                            INFLUX_DB)
+    client.write_points(points)
+
+
+def _create_point_list(teamscores, round_n):
+    timestamp = f"{datetime.datetime.now().utcnow()}"
+    points = []
+    for team, score in teamscores.items():
+        points.append(
+            {
+                "measurement": "score",
+                "tags": {
+                    "team": team,
+                    "round": round_n
+                },
+                "time": timestamp,
+                "fields": {
+                    "value": score
+                }
+            }
+        )
+    return points

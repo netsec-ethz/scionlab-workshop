@@ -66,7 +66,10 @@ do
     fi
     LINE=$((LINE+1))
 done < configs/config_round_0.csv
-
+for i in {1..8}; do
+    mkdir rounds/cur-round/sink/$(($i * 10))
+    touch rounds/cur-round/sink/$((i * 10))/scores.txt
+done
 
 # Clear the round
 ./scionlab.sh manage finish
