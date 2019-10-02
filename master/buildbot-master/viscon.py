@@ -132,7 +132,7 @@ def player_factory_factory(player_id):
                                               workerdest='./submit.py'))
 
     # 2. run it
-    player_factory.addStep(steps.ShellCommand(command=['cp']+API_FILES+['.']))
+    # player_factory.addStep(steps.ShellCommand(command=['cp']+API_FILES+['.']))
     player_factory.addStep(steps.ShellCommand(command=run_cmd,
                                               maxTime=PLAYER_TIME,
                                               sigtermTime=1,
