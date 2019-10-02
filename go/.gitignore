@@ -1,0 +1,5 @@
+__pycache__
+vendor/*/
+scion_api.h
+scion_api.so
+sink
