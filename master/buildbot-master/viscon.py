@@ -12,6 +12,8 @@ from datetime import datetime
 
 from buildbot.plugins import *
 
+RUN = os.path.isfile('../RUN')
+
 ####### CONSTANTS
 
 ROUND_TICK  =  60  # How often we run a round, in seconds.
@@ -89,7 +91,7 @@ schedulers = [
     run_players_sch,
     collect_results_sch,
     finish_round_sch,
-]
+] if RUN else []
 
 ####### BUILDERS
 
