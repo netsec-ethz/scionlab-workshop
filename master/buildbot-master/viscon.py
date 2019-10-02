@@ -91,7 +91,7 @@ schedulers = [
     run_players_sch,
     collect_results_sch,
     finish_round_sch,
-] if RUN else []
+]
 
 ####### BUILDERS
 
@@ -200,3 +200,8 @@ port        = 8010
 buildbotURL = "http://localhost:{}/".format(port)
 titleURL    = buildbotURL
 title       = "SCIONLab Workshop"
+
+####### RUN TOGGLE
+
+if not RUN:
+    ...
