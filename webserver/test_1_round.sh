@@ -47,12 +47,26 @@ echo ""
 echo ""
 ./scionlab.sh manage prepare
 
-echo
+echo ""
 # Add some fake logs
 for cur in ./rounds/cur-round/source/*
 do
 touch "$cur/log"
 done
+
+# Add some fake results
+LINE=0
+while IFS=, read -r col1 col2 col3 col4
+do
+    if (($LINE % 2 ))
+    then
+        echo $LINE
+        mkdir rounds/cur-round/sink/$col3
+        echo -e "$col2\t$col4" >> rounds/cur-round/sink/$col3/scores.txt
+    fi
+    LINE=$((LINE+1))
+done < configs/config_round_0.csv
+
 
 # Clear the round
 ./scionlab.sh manage finish
