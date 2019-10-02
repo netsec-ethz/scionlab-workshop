@@ -21,7 +21,7 @@ ROUND_TICK  =  60  # How often we run a round, in seconds.
 PLAYER_TIME =  30  # How long the player code runs in each round, in seconds.
                    # Sets player running time.
 
-API_FILES = ['~/scion_api.so', '~/pyscion.py']  # files needed for the player code
+API_FILES = ['/home/ubuntu/scion_api.so', '/home/ubuntu/pyscion.py']  # files needed for the player code
 
 PLAYERS = {}
 SINKS   = {}
