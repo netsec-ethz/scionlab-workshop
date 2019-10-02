@@ -291,6 +291,7 @@ func Write(fd C.long, bytes *C.uchar, count C.size_t) CError {
 		return cerr("Bad descriptor")
 	}
 	n, err := conn.Write(C.GoBytes(unsafe.Pointer(bytes), C.int(count)))
+	_ = n
 	if err != nil {
 		return errorToCString(err)
 	}
