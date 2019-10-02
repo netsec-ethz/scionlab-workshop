@@ -21,9 +21,10 @@ ROUND_TICK  =  60  # How often we run a round, in seconds.
 PLAYER_TIME =  30  # How long the player code runs in each round, in seconds.
                    # Sets player running time.
 
+API_FILES = ['~/scion_api.so', '~/pyscion.py']  # files needed for the player code
+
 PLAYERS = {}
 SINKS   = {}
-
 with open('../worker_to_ssh.csv') as f:
     for row in csv.reader(f):
         if row[0].startswith('source-'):
@@ -44,7 +45,7 @@ def webserver_dir(what, id):
     return os.path.join(DATADIR, what, id)
 
 # communication with sinks
-SINK_HTTP_PORT = 9999  # used for stats reset signalling
+SINK_HTTP_PORT = 8080  # used for stats reset signalling
 
 
 ####### WORKERS
@@ -115,25 +116,24 @@ builders += [util.BuilderConfig(
 #### 2. Run players
 
 def player_factory_factory(player_id):
-    # TODO:
-    # - get task file and give as stdin
     player_factory = util.BuildFactory()
 
     nowstr     = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
     source_dir = webserver_dir('source', PLAYERS[player_id][0])
+    task_file  = os.path.join(source_dir, 'round.txt')
     code_file  = os.path.join(source_dir, 'submit.py')
     log_file   = os.path.join(source_dir, 'log')  # why not at least output.log or something
-    run_cmd    = ['sh', '-c', 'python3 ./submit.py > ./output.log 2>&1']  # :D
+    run_cmd    = ['sh', '-c', 'python3 ./submit.py < ./round.txt > ./output.log 2>&1']  # :D
 
-    # 1. put the user's code on the worker
+    # 1. put the task file and user's code on the worker
+    player_factory.addStep(steps.FileDownload(mastersrc=task_file,
+                                              workerdest='./round.txt'))
     player_factory.addStep(steps.FileDownload(mastersrc=code_file,
                                               workerdest='./submit.py'))
-    # fuck it, I need to give the sinks time to start the network before I start the players and this is hard so fuck it :D
-    player_factory.addStep(steps.ShellCommand(command=['sleep', '2']))
 
     # 2. run it
+    player_factory.addStep(steps.ShellCommand(command=['cp']+API_FILES+['.']))
     player_factory.addStep(steps.ShellCommand(command=run_cmd,
-                                              env={"PYTHONPATH": "."},
                                               maxTime=PLAYER_TIME,
                                               sigtermTime=1,
                                               logfiles={'userout': './output.log'}))
@@ -154,7 +154,8 @@ builders += [
 
 def collect_results_factory_factory(sink_id):
     results_factory = util.BuildFactory()
-    sink_file = os.path.join(DATADIR, 'sink', SINKS[sink_id][0]+'.txt')
+    sink_dir = webserver_dir('sink', SINKS[sink_id][0])
+    sink_file = os.path.join(sink_dir, 'scores.txt')
 
     # I don't really want to do the POST from master, because then that would
     # require it to be network-accessible and I'm not sure if that's a good
@@ -162,12 +163,8 @@ def collect_results_factory_factory(sink_id):
     # have any auth :D So... fuck it, gonna curl from localhost :D
     # results_factory.addStep(steps.POST())
     http_cmd = ['curl', '-X', 'POST', 'http://localhost:{}/'.format(SINK_HTTP_PORT)]
-    # TODO enable when we have server
-    # results_factory.addStep(steps.ShellCommand(command=http_cmd))
-    # results_factory.addStep(steps.FileUpload(workersrc='./results.txt',  # TODO
-    #                                         masterdest=sink_file))
-    # create fake logs for now
-    results_factory.addStep(steps.FileUpload(workersrc='/etc/hosts',
+    results_factory.addStep(steps.ShellCommand(command=http_cmd))
+    results_factory.addStep(steps.FileUpload(workersrc='/tmp/scores.txt',
                                             masterdest=sink_file))
     return results_factory
 
