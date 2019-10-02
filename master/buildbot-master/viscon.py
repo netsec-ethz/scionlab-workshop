@@ -14,9 +14,9 @@ from buildbot.plugins import *
 
 ####### CONSTANTS
 
-ROUND_TICK  =  30  # How often we run a round, in seconds.
+ROUND_TICK  =  60  # How often we run a round, in seconds.
                    # Drives the round-tick scheduler.
-PLAYER_TIME =  10  # How long the player code runs in each round, in seconds.
+PLAYER_TIME =  30  # How long the player code runs in each round, in seconds.
                    # Sets player running time.
 
 PLAYERS = {}

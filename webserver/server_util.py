@@ -11,7 +11,7 @@ from shutil import rmtree, copyfile
 from gen_configs import read_addr
 from scoring.score_run import load_goals, score_run
 
-NUM_ROUNDS = 2
+NUM_ROUNDS = 100
 DST_PER_ROUND = 3
 
 # Directory structure
