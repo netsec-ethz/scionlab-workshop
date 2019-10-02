@@ -2,11 +2,14 @@
 import csv
 import datetime
 import os
+import re
 import shutil
+from collections import defaultdict
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
-from gen_configs import read_src_addr
+from gen_configs import read_addr
+from scoring.score_run import load_goals, score_run
 
 NUM_ROUNDS = 2
 DST_PER_ROUND = 3
@@ -22,6 +25,8 @@ LOGS_SUBDIR = "logs/"
 CODE_SUBDIR = "code/"
 CUR_ROUND = "cur-round"
 SUBMIT_NAME = "submit"
+SCORE_FILE = "scores.txt"
+# Default messages
 DEFAULT_PY = "# This is the default blank python script.\nprint('You " \
              "have not provided a valid submission yet!')\n"
 NULL_CODE = "print('Default code to make buildbot happy')\n"
@@ -29,7 +34,7 @@ NULL_CODE = "print('Default code to make buildbot happy')\n"
 LOGNAME = "log"
 
 TEAMS = os.path.join(CONFIGS_DIR, "teams_ids.csv")
-SOURCES = os.path.join(INFRASTRUCTURE_DIR, "src_addr")
+SOURCES = os.path.join(INFRASTRUCTURE_DIR, "src_addr.csv")
 DESTINATIONS = os.path.join(INFRASTRUCTURE_DIR, "dst_addr.csv")
 CUR_ROUND_DIR = os.path.join(ROUNDS_DIR, CUR_ROUND)
 
@@ -38,6 +43,12 @@ SECRET = os.getenv('SECRET', default="")
 
 def team_id(instring, length=6):
     return str(sha256(bytes(instring + SECRET, 'ascii')).hexdigest())[:length]
+
+
+def valid_teamname(teamname):
+    if re.match(r'[\w]+$', teamname):
+        return True
+    return False
 
 
 def teams_from_dir():
@@ -90,7 +101,7 @@ def prepare_round():
     os.mkdir(os.path.join(CUR_ROUND_DIR, "sink"))
 
     # Get the config with the teamname-source mappings.
-    all_sources = read_src_addr(SOURCES)
+    all_sources, _ = read_addr(SOURCES)
     config_name = os.path.join(CONFIGS_DIR, f"config_round_{cur_round}.csv")
     with open(config_name, 'r') as infile:
         reader = csv.reader(infile)
@@ -177,6 +188,25 @@ def finish_round():
         dst_path = os.path.join(TEAMS_DIR, cur_team, LOGS_SUBDIR, log_name)
         copyfile(os.path.join(round_dir, SOURCE_SUBDIR, cur_src, LOGNAME),
                  dst_path)
+    # Gather the scores
+    sink_dir = os.path.join(round_dir, SINK_SUBDIR)
+    results = defaultdict(dict)
+    for cur_sink in os.listdir(sink_dir):
+        with open(os.path.join(sink_dir, cur_sink, SCORE_FILE), 'r') as infile:
+            reader = csv.reader(infile, delimiter='\t')
+            for line in reader:
+                # results: (src, dst, bytes)
+                results[line[0]][cur_sink] = int(line[1])
+
+    # Scores
+    goals, src2team = load_goals(os.path.join(CONFIGS_DIR,
+                                              f"config_round_{cur_round}.csv"))
+    scores = score_run(goals, results)
+    # If there is no src entry in the scores, set the score to zero
+    teamscores = {team: scores[src] if src in scores else 0 for src, team in
+                  src2team.items()}
+
+    print(teamscores)
 
 
 def machine2team(cur_round):
