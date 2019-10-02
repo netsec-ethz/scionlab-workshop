@@ -123,7 +123,7 @@ def player_factory_factory(player_id):
     task_file  = os.path.join(source_dir, 'round.txt')
     code_file  = os.path.join(source_dir, 'submit.py')
     log_file   = os.path.join(source_dir, 'log')  # why not at least output.log or something
-    run_cmd    = ['sh', '-c', 'python3 ./submit.py < ./round.txt > ./output.log 2>&1']  # :D
+    run_cmd    = ['sh', '-c', 'python3 ./submit.py < ./round.txt > ./output.log 2>&1 || true']  # :D
 
     # 1. put the task file and user's code on the worker
     player_factory.addStep(steps.FileDownload(mastersrc=task_file,
