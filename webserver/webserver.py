@@ -43,7 +43,8 @@ def signup(teamname):
     with open(os.path.join(TEAMS_DIR, teamname, CODE_SUBDIR, out_name),
               'w') as outfile:
         outfile.write(DEFAULT_PY)
-    return f"Welcome, {teamname}! Your ID is {new_team_id}"
+    return f"Welcome, {teamname}! Your ID is {new_team_id}\n" \
+        f"PLEASE REMEMBER TO $ export TEAM_TOKEN={new_team_id}"
 
 
 @app.route('/<teamid>/submit', methods=['POST'])
