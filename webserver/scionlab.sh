@@ -1,6 +1,8 @@
 #!/bin/bash
 
 ProgName=$(basename $0)
+SERVER="127.0.0.1:5000"
+
 
 sub_help(){
     echo "Usage: $ProgName <subcommand> [options]\n"
@@ -41,6 +43,7 @@ sub_manage(){
 
 subcommand=$1
 
+echo "=== BEFORE YOU RUN COMMANDS (other than signup) REMEBER TO $ export TEAM_TOKEN=<token> ==="
 case $subcommand in
     "" | "-h" | "--help")
         sub_help
