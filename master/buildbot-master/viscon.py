@@ -136,7 +136,8 @@ def player_factory_factory(player_id):
     player_factory.addStep(steps.ShellCommand(command=run_cmd,
                                               maxTime=PLAYER_TIME,
                                               sigtermTime=1,
-                                              logfiles={'userout': './output.log'}))
+                                              logfiles={'userout': './output.log'},
+                                              decodeRC={i: steps.SUCCESS for i in range(-256,256)}))
     # 3. give the code's output back to the users
     player_factory.addStep(steps.FileUpload(workersrc='./output.log',
                                             masterdest=log_file))
