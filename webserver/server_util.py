@@ -8,6 +8,8 @@ from collections import defaultdict
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
+from influxdb import InfluxDBClient
+
 from gen_configs import read_addr
 from scoring.score_run import load_goals, score_run
 
@@ -39,6 +41,11 @@ DESTINATIONS = os.path.join(INFRASTRUCTURE_DIR, "dst_addr.csv")
 CUR_ROUND_DIR = os.path.join(ROUNDS_DIR, CUR_ROUND)
 
 SECRET = os.getenv('SECRET', default="")
+
+INFLUX_USER = os.getenv("INFLUX_USER")
+INFLUX_PWD = os.getenv("INFLUX_PWD")
+INFLUX_DB = os.getenv("INFLUX_DB")
+INFLUX_ADDR = os.getenv("INFLUX_ADDR")
 
 
 def team_id(instring, length=6):
@@ -206,7 +213,9 @@ def finish_round():
     teamscores = {team: scores[src] if src in scores else 0 for src, team in
                   src2team.items()}
 
-    print(teamscores)
+    # Send scores to influx
+    _push_to_influxdb(teamscores, cur_round)
+    return "Round finished and scores pushed"
 
 
 def machine2team(cur_round):
@@ -220,13 +229,29 @@ def machine2team(cur_round):
             machine_team[row[1]] = row[0]
     return machine_team
 
-# def team2machine(cur_round):
-#     """Compute the map from machines to teams."""
-#     # Get the config with the teamname-source mappings.
-#     config_name = f"configs/config_round_{cur_round}.csv"
-#     machine_team = {}
-#     with open(config_name, 'r') as infile:
-#         reader = csv.reader(infile)
-#         for row in reader:
-#             machine_team[row[0]] = row[1]
-#     return machine_team
+
+def _push_to_influxdb(teamscores, round_n):
+    points = _create_point_list(teamscores, round_n)
+    client = InfluxDBClient(INFLUX_ADDR, 8086, INFLUX_USER, INFLUX_PWD,
+                            INFLUX_DB)
+    client.write(points)
+
+
+def _create_point_list(teamscores, round_n):
+    timestamp = f"{datetime.datetime.now().utcnow()}"
+    points = []
+    for team, score in teamscores.items():
+        points.append(
+            {
+                "measurement": "score",
+                "tags": {
+                    "team": team,
+                    "round": round_n
+                },
+                "time": timestamp,
+                "fields": {
+                    "value": score
+                }
+            }
+        )
+    return points
