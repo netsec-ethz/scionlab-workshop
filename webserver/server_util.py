@@ -210,7 +210,7 @@ def finish_round():
     # Keep only the machines that actually have a team assigned
     machine_team = machine2team(cur_round)
     for cur_src, cur_team in machine_team.items():
-        log_name = f"{timestamp}_log"
+        log_name = f"{timestamp}-log"
         dst_path = os.path.join(TEAMS_DIR, cur_team, LOGS_SUBDIR, log_name)
         copyfile(os.path.join(round_dir, SOURCE_SUBDIR, cur_src, LOGNAME),
                  dst_path)
