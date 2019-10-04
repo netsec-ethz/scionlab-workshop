@@ -117,6 +117,33 @@ class Path:
 def _build_paths(paths, paths_len):
     return [Path(paths[i]) for i in range(paths_len.value)]
 
+
+class connect:
+    def __init__(self, destination, path):
+        self.destination = destination
+        self.path = path
+        if self.path:
+            self.fd = call_connect(self.destination, self.path)
+        else:
+            self.fd = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        if self.fd is not None:
+            self.close()
+
+    def write(self, buffer):
+        return call_write(self.fd, buffer)
+
+    def read(self, buffer):
+        return call_read(self.fd, buffer)
+
+    def close(self):
+        return call_close(self.fd)
+
+
  # ---------------------------------------------------------
 
 
@@ -162,7 +189,7 @@ def paths(destination):
 
 lib.Connect.argtypes = [POINTER(c_long), charptr, POINTER(_PathReplyEntry)]
 lib.Connect.restype = c_char_p
-def connect(destination, path):
+def call_connect(destination, path):
     fd = c_long()
     cpath = path.to_cstruct()
     err = lib.Connect(byref(fd), str_to_cstr(destination), cpath)
@@ -173,7 +200,7 @@ def connect(destination, path):
 
 lib.Close.argtypes = [c_long]
 lib.Close.restype = c_char_p
-def close(fd):
+def call_close(fd):
     err = lib.Close(fd)
     if err != None:
         raise SCIONException(err)
@@ -181,11 +208,23 @@ def close(fd):
 
 lib.Write.argtypes = [c_long, POINTER(c_char), c_size_t]
 lib.Write.restype = c_char_p
-def write(fd, buffer):
+def call_write(fd, buffer):
     cbuffer = (c_char * len(buffer))(*buffer)
     err = lib.Write(fd, cbuffer, len(buffer))
     if err != None:
         raise SCIONException(err)
+
+
+lib.Read.argtypes = [POINTER(c_size_t), POINTER(charptr), c_long, POINTER(c_ubyte), c_size_t]
+lib.Read.restype = c_char_p
+def call_read(fd, buffer):
+    c_buffer = (c_ubyte * len(buffer)).from_buffer(buffer)
+    n = c_size_t()
+    client_address = charptr()
+    err = lib.Read(byref(n), byref(client_address), fd, c_buffer, len(buffer))
+    if err != None:
+        raise SCIONException(err)
+    return cstr_to_str(client_address), int(n.value)
 
 
 lib.Listen.argtypes = [POINTER(c_long), c_ushort]
@@ -195,17 +234,6 @@ def listen(port):
     err = lib.Listen(byref(fd), c_ushort(port))
     if err != None:
         raise SCIONException(err)
-    return int(fd.value)
-
-
-lib.Read.argtypes = [POINTER(c_size_t), POINTER(charptr), c_long, POINTER(c_ubyte), c_size_t]
-lib.Read.restype = c_char_p
-def read(fd, buffer):
-    c_buffer = (c_ubyte * len(buffer)).from_buffer(buffer)
-    n = c_size_t()
-    client_address = charptr()
-    err = lib.Read(byref(n), byref(client_address), fd, c_buffer, len(buffer))
-    if err != None:
-        raise SCIONException(err)
-    return cstr_to_str(client_address), int(n.value)
-
+    conn = connect(None, None)
+    conn.fd = int(fd.value)
+    return conn

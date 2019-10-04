@@ -14,12 +14,21 @@ def main():
         print('[%d] %s' % (i, str(p)))
 
     fd = connect(destination, p[0])
-    write(fd, b'abcd')
-    close(fd)
+    fd.write(b'abcd')
+    fd.close()
 
-    fd = listen(11223)
+    with connect(destination, p[0]) as fd:
+        fd.write(b'zzzz')
+
     buffer = bytearray(4096)
-    client_address, n = read(fd, buffer)
+    fd = listen(11223)
+    client_address, n = fd.read(buffer)
+    print('Read from %s an amount of %d bytes' % (client_address, len(buffer[:n])))
+    print('buffer is:', buffer[:n])
+    fd.close()
+
+    with listen(11223) as fd:
+        client_address, n = fd.read(buffer)
     print('Read from %s an amount of %d bytes' % (client_address, len(buffer[:n])))
     print('buffer is:', buffer[:n])
 
