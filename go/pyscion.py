@@ -84,10 +84,9 @@ class Path:
             interfaces=interfaces,
         )
 
-    def __str__(self):
+    def __repr__(self):
         path = self.path.interfaces
-        return '{thisclass}({hostinfo}, {path})'.format(
-            thisclass=type(self).__name__,
+        return 'PathClass(HostInfo: {hostinfo}, FwdPath: {path})'.format(
             hostinfo=str(self.host_info),
             path=path)
 
@@ -115,27 +114,8 @@ class Path:
         return centry
 
 
-class Paths:
-    """ A path from the source AS to the destination, as returned by SCION """
-    def __init__(self, paths, paths_len):
-        self._paths = [Path(paths[i]) for i in range(paths_len.value)]
-
-    def __str__(self):
-        return '\n'.join( ('[{i}] {p}'.format(
-            i=i,
-            p=self._paths[i]) for i in range(len(self._paths))) )
-
-    def __len__(self):
-        return len(self._paths)
-
-    def __getitem__(self, index):
-        return self._paths[index]
-
-    def __setitem__(self, index, value):
-        self._paths[index] = value
-
-    def __delitem__(self, index):
-        del self._paths[index]
+def _build_paths(paths, paths_len):
+    return [Path(paths[i]) for i in range(paths_len.value)]
 
  # ---------------------------------------------------------
 
@@ -173,7 +153,7 @@ def paths(destination):
     err = lib.Paths(byref(paths_n), byref(paths), str_to_cstr(destination))
     if err != None:
         raise SCIONException(err)
-    pypaths = Paths(paths, paths_n)
+    pypaths = _build_paths(paths, paths_n)
     err = lib.FreePathsMemory(paths, paths_n)
     if err != None:
         raise SCIONException(err)

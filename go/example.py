@@ -6,9 +6,13 @@ def main():
     set_log_level(1)
     init()
     print('Local Address is %s' % local_address())
+
     destination = '17-ffaa:1:a,[127.0.0.1]:12345'
     p = paths(destination)
-    print('Got %d paths' % len(p))
+    print('Got %d paths:' % len(p))
+    for i in range(len(p)):
+        print('[%d] %s' % (i, str(p)))
+
     fd = connect(destination, p[0])
     write(fd, b'abcd')
     close(fd)
