@@ -4,7 +4,7 @@ The API consists of:
 - init()
 - addr = local_address()
 - paths = paths(destination)
-- fd = open(destination, path)
+- fd = connect(destination, path)
 - close(fd)
 - write(fd, buffer)
 - fd = listen(port)
@@ -174,12 +174,12 @@ def paths(destination):
     return pypaths
 
 
-lib.Open.argtypes = [POINTER(c_long), charptr, POINTER(_PathReplyEntry)]
-lib.Open.restype = c_char_p
-def open(destination, path):
+lib.Connect.argtypes = [POINTER(c_long), charptr, POINTER(_PathReplyEntry)]
+lib.Connect.restype = c_char_p
+def connect(destination, path):
     fd = c_long()
     cpath = path.to_cstruct()
-    err = lib.Open(byref(fd), str_to_cstr(destination), cpath)
+    err = lib.Connect(byref(fd), str_to_cstr(destination), cpath)
     if err != None:
         raise SCIONException(err)
     return int(fd.value)

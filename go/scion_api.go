@@ -203,8 +203,8 @@ func findFreeDescriptor(conn snet.Conn) (int, error) {
 	return k, nil
 }
 
-//export Open
-func Open(pFd *C.long, pHostAddress *C.char, cpath *C.PathReplyEntry) CError {
+//export Connect
+func Connect(pFd *C.long, pHostAddress *C.char, cpath *C.PathReplyEntry) CError {
 	dst := C.GoString(pHostAddress)
 	dstAddress, err := snet.AddrFromString(dst)
 	if err != nil {
