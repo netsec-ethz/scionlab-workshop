@@ -119,8 +119,7 @@ func LocalAddress(retLocalAddress **C.char) CError {
 	if localAddress == nil {
 		return cerr("Exception: local address is nil")
 	}
-	cstr := C.CString(localAddress.String())
-	*retLocalAddress = cstr
+	*retLocalAddress = C.CString(fmt.Sprintf("%s,[%v]", localAddress.IA, localAddress.Host.L3))
 	return nil
 }
 

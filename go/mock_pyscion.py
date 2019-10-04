@@ -52,7 +52,7 @@ def init():
 
 
 def local_address():
-    return '1-ffaa:0:0,[127.0.0.1]:<nil>'
+    return '1-ffaa:0:0,[127.0.0.1]'
 
 
 def paths(destination):
