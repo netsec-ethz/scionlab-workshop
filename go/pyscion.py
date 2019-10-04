@@ -1,14 +1,15 @@
 
 """
 The API consists of:
+- set_log_level(level)
 - init()
 - addr = local_address()
 - paths = paths(destination)
 - fd = connect(destination, path)
-- close(fd)
-- write(fd, buffer)
+- fd.close()
+- fd.write(buffer)
 - fd = listen(port)
-- addr, n = read(fd, buffer)
+- addr, n = fd.read(buffer)
 """
 
 from ctypes import *
