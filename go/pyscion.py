@@ -140,6 +140,12 @@ class Paths:
  # ---------------------------------------------------------
 
 
+lib.SetLogLevel.argtypes = [c_int]
+def set_log_level(level):
+    """ sets the log level in the API. 0 <= 0 <= 2 """
+    lib.SetLogLevel(level)
+
+
 lib.Init.restype = c_char_p
 def init():
     err = lib.Init()

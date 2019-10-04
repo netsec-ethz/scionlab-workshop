@@ -2,6 +2,8 @@ from pyscion import *
 
 
 def main():
+    print('Setting log level')
+    set_log_level(1)
     init()
     print('Local Address is %s' % local_address())
     destination = '17-ffaa:1:a,[127.0.0.1]:12345'
