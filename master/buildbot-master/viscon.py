@@ -11,6 +11,7 @@ import re
 from datetime import datetime
 
 from buildbot.plugins import *
+from buildbot.process.results import SUCCESS
 
 RUN = os.path.isfile('../RUN')
 
@@ -137,7 +138,7 @@ def player_factory_factory(player_id):
                                               maxTime=PLAYER_TIME,
                                               sigtermTime=1,
                                               logfiles={'userout': './output.log'},
-                                              decodeRC={i: steps.SUCCESS for i in range(-256,256)}))
+                                              decodeRC={i: SUCCESS for i in range(-256,256)}))
     # 3. give the code's output back to the users
     player_factory.addStep(steps.FileUpload(workersrc='./output.log',
                                             masterdest=log_file))

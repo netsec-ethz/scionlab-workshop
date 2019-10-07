@@ -13,7 +13,7 @@ from influxdb import InfluxDBClient
 from gen_configs import read_addr
 from scoring.score_run import load_goals, score_run
 
-NUM_ROUNDS = 100
+NUM_ROUNDS = 1000
 DST_PER_ROUND = 3
 
 # Directory structure
@@ -189,7 +189,6 @@ def get_last_round_num():
     cur_max = -1
     for name in round_names:
         if name != "cur-round":
-            print(name)
             round_num = int(name.split("-")[1])  # Round folders  `round-N`
             cur_max = max(cur_max, round_num)
     return cur_max

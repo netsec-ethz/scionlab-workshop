@@ -44,7 +44,7 @@ def signup(teamname):
               'w') as outfile:
         outfile.write(DEFAULT_PY)
     return f"Welcome, {teamname}! Your ID is {new_team_id}\n" \
-        f"PLEASE REMEMBER TO $ export TEAM_TOKEN={new_team_id}"
+        f"PLEASE REMEMBER TO $ export TEAM_TOKEN={new_team_id}\n"
 
 
 @app.route('/<teamid>/submit', methods=['POST'])
@@ -156,4 +156,4 @@ if __name__ == '__main__':
     cleanup_dir(TEAMS_DIR)
     cleanup_dir(ROUNDS_DIR)
     cleanup_dir(CONFIGS_DIR)
-    app.run(port=os.getenv('PORT', 5000), threaded=True)
+    app.run(host='0.0.0.0', port=os.getenv('PORT', 5000), threaded=True)

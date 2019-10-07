@@ -2,4 +2,6 @@
 
 *.tac
 *.log
+*.log.*
 *.sqlite
+master.cfg.sample
