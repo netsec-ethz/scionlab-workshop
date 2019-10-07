@@ -5,7 +5,6 @@ import logging
 
 from flask import Flask
 from flask import request, send_file
-
 from gen_configs import read_teamnames, read_addr, generate_all_configs, \
     write_configs
 from server_util import *
@@ -18,7 +17,7 @@ app.sign_up = False  # The platform allows signup
 
 @app.route('/')
 def hello():
-    return "SCION-Lab workshop at VISCON!"
+    return "SCIONLab workshop at VISCON!"
 
 
 @app.route('/signup/<teamname>', methods=['GET'])
@@ -50,7 +49,7 @@ def signup(teamname):
 @app.route('/<teamid>/submit', methods=['POST'])
 def submit(teamid):
     _, team_ids = teams_from_dir()
-    if check_teamid(teamid, team_ids):
+    if teamid in team_ids:
         teamname = team_ids[teamid]
         app.logger.info(f"Submission from {teamname}")
         submitted = request.files['upload']
@@ -65,7 +64,7 @@ def submit(teamid):
 @app.route('/<teamid>/logs', methods=['GET'])
 def get_logs(teamid):
     _, team_ids = teams_from_dir()
-    if check_teamid(teamid, team_ids):
+    if teamid in team_ids:
         teamname = team_ids[teamid]
         app.logger.info(f"Checking logs from {teamname}")
         team_log_dir = os.path.join(TEAMS_DIR, teamname, LOGS_SUBDIR)
@@ -81,12 +80,6 @@ def get_logs(teamid):
 
 # Management commands
 MAN_SECRET = os.getenv('MAN_SECRET')
-
-
-@app.route("/manage")
-def get_management_token():
-    app.logger.info(f"The management secret is {MAN_SECRET}")
-    return f"This page is for management only"
 
 
 @app.route(f"/{MAN_SECRET}/teams")
