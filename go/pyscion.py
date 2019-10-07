@@ -1,37 +1,25 @@
-
-"""
-The API consists of:
-- set_log_level(level)
-- init()
-- addr = local_address()
-- paths = paths(destination)
-- fd = connect(destination, path)
-- fd.close()
-- fd.write(buffer)
-- fd = listen(port)
-- addr, n = fd.read(buffer)
-"""
+__all__ = ['SCIONException', 'HostInfo', 'FwdPathMeta', 'Interface', 'Path', 'connect',
+    'set_log_level', 'init', 'local_address', 'paths', 'listen']
 
 from ctypes import *
 from collections import namedtuple
 from ipaddress import IPv4Address
 
 
-lib = cdll.LoadLibrary('./scion_api.so')
+_lib = cdll.LoadLibrary('./scion_api.so')
 
 
 class SCIONException(Exception):
     """ A generic error from SCION """
     def __init__(self, error_msg):
         if isinstance(error_msg, bytes):
-            error_msg = cstr_to_str(error_msg)
+            error_msg = _cstr_to_str(error_msg)
         super().__init__(error_msg)
 
-charptr      = POINTER(c_char)
 
-def str_to_cstr(str):
+def _str_to_cstr(str):
     return str.encode('utf-8')
-def cstr_to_str(cstr):
+def _cstr_to_str(cstr):
     return cast(cstr, c_char_p).value.decode('utf-8')
 
  # ---------------------------------------------------------
@@ -74,7 +62,7 @@ class Path:
         p = cpath.path.contents
         interfaces = list(
             Interface(
-                isd_as=cstr_to_str(p.interfaces[i].isdAs),
+                isd_as=_cstr_to_str(p.interfaces[i].isdAs),
                 if_id=int(p.interfaces[i].ifid) )
             for i in range(p.interfaces_length)
         )
@@ -106,7 +94,7 @@ class Path:
         interfaces = (_PathInterface * len(self.path.interfaces))()
         for i in range(len(self.path.interfaces)):
             interfaces[i].ifid = self.path.interfaces[i].if_id
-            interfaces[i].isdAs = str_to_cstr(self.path.interfaces[i].isd_as)
+            interfaces[i].isdAs = _str_to_cstr(self.path.interfaces[i].isd_as)
         path.interfaces = POINTER(_PathInterface)()
         path.interfaces = interfaces
 
@@ -124,7 +112,7 @@ class connect:
         self.destination = destination
         self.path = path
         if self.path:
-            self.fd = call_connect(self.destination, self.path)
+            self.fd = _call_connect(self.destination, self.path)
         else:
             self.fd = None
 
@@ -136,103 +124,103 @@ class connect:
             self.close()
 
     def write(self, buffer):
-        return call_write(self.fd, buffer)
+        return _call_write(self.fd, buffer)
 
     def read(self, buffer):
-        return call_read(self.fd, buffer)
+        return _call_read(self.fd, buffer)
 
     def close(self):
-        return call_close(self.fd)
+        return _call_close(self.fd)
 
 
  # ---------------------------------------------------------
 
 
-lib.SetLogLevel.argtypes = [c_int]
+_lib.SetLogLevel.argtypes = [c_int]
 def set_log_level(level):
     """ sets the log level in the API. 0 <= 0 <= 2 """
-    lib.SetLogLevel(level)
+    _lib.SetLogLevel(level)
 
 
-lib.Init.restype = c_char_p
+_lib.Init.restype = c_char_p
 def init():
-    err = lib.Init()
+    err = _lib.Init()
     if err != None:
         raise SCIONException(err)
 
 
-lib.LocalAddress.argtypes = [POINTER(charptr)]
-lib.LocalAddress.restype = c_char_p
+_lib.LocalAddress.argtypes = [POINTER(POINTER(c_char))]
+_lib.LocalAddress.restype = c_char_p
 def local_address():
-    ptr = charptr()
-    err = lib.LocalAddress(byref(ptr))
+    ptr = POINTER(c_char)()
+    err = _lib.LocalAddress(byref(ptr))
     if err != None:
         raise SCIONException(err)
-    return cstr_to_str(ptr)
+    return _cstr_to_str(ptr)
 
 
-lib.Paths.argtypes = [POINTER(c_size_t), POINTER(POINTER(_PathReplyEntry)), charptr]
-lib.Paths.restype = c_char_p
-lib.FreePathsMemory.argtypes = [POINTER(_PathReplyEntry), c_size_t]
-lib.FreePathsMemory.restype = c_char_p
+_lib.Paths.argtypes = [POINTER(c_size_t), POINTER(POINTER(_PathReplyEntry)), POINTER(c_char)]
+_lib.Paths.restype = c_char_p
+_lib.FreePathsMemory.argtypes = [POINTER(_PathReplyEntry), c_size_t]
+_lib.FreePathsMemory.restype = c_char_p
 def paths(destination):
     paths_n = c_size_t()
     paths = (POINTER(_PathReplyEntry))()
-    err = lib.Paths(byref(paths_n), byref(paths), str_to_cstr(destination))
+    err = _lib.Paths(byref(paths_n), byref(paths), _str_to_cstr(destination))
     if err != None:
         raise SCIONException(err)
     pypaths = _build_paths(paths, paths_n)
-    err = lib.FreePathsMemory(paths, paths_n)
+    err = _lib.FreePathsMemory(paths, paths_n)
     if err != None:
         raise SCIONException(err)
     return pypaths
 
 
-lib.Connect.argtypes = [POINTER(c_long), charptr, POINTER(_PathReplyEntry)]
-lib.Connect.restype = c_char_p
-def call_connect(destination, path):
+_lib.Connect.argtypes = [POINTER(c_long), POINTER(c_char), POINTER(_PathReplyEntry)]
+_lib.Connect.restype = c_char_p
+def _call_connect(destination, path):
     fd = c_long()
     cpath = path.to_cstruct()
-    err = lib.Connect(byref(fd), str_to_cstr(destination), cpath)
+    err = _lib.Connect(byref(fd), _str_to_cstr(destination), cpath)
     if err != None:
         raise SCIONException(err)
     return int(fd.value)
 
 
-lib.Close.argtypes = [c_long]
-lib.Close.restype = c_char_p
-def call_close(fd):
-    err = lib.Close(fd)
+_lib.Close.argtypes = [c_long]
+_lib.Close.restype = c_char_p
+def _call_close(fd):
+    err = _lib.Close(fd)
     if err != None:
         raise SCIONException(err)
 
 
-lib.Write.argtypes = [c_long, POINTER(c_char), c_size_t]
-lib.Write.restype = c_char_p
-def call_write(fd, buffer):
+_lib.Write.argtypes = [c_long, POINTER(c_char), c_size_t]
+_lib.Write.restype = c_char_p
+def _call_write(fd, buffer):
     cbuffer = (c_char * len(buffer))(*buffer)
-    err = lib.Write(fd, cbuffer, len(buffer))
+    err = _lib.Write(fd, cbuffer, len(buffer))
     if err != None:
         raise SCIONException(err)
 
 
-lib.Read.argtypes = [POINTER(c_size_t), POINTER(charptr), c_long, POINTER(c_ubyte), c_size_t]
-lib.Read.restype = c_char_p
-def call_read(fd, buffer):
+_lib.Read.argtypes = [POINTER(c_size_t), POINTER(POINTER(c_char)), c_long, POINTER(c_ubyte), c_size_t]
+_lib.Read.restype = c_char_p
+def _call_read(fd, buffer):
     c_buffer = (c_ubyte * len(buffer)).from_buffer(buffer)
     n = c_size_t()
-    client_address = charptr()
-    err = lib.Read(byref(n), byref(client_address), fd, c_buffer, len(buffer))
+    client_address = POINTER(c_char)()
+    err = _lib.Read(byref(n), byref(client_address), fd, c_buffer, len(buffer))
     if err != None:
         raise SCIONException(err)
-    return cstr_to_str(client_address), int(n.value)
+    return _cstr_to_str(client_address), int(n.value)
 
 
-lib.Listen.argtypes = [POINTER(c_long), c_ushort]
-lib.Listen.restype = c_char_p
+_lib.Listen.argtypes = [POINTER(c_long), c_ushort]
+_lib.Listen.restype = c_char_p
 def listen(port):
     fd = c_long()
-    err = lib.Listen(byref(fd), c_ushort(port))
+    err = _lib.Listen(byref(fd), c_ushort(port))
     if err != None:
         raise SCIONException(err)
     conn = connect(None, None)
