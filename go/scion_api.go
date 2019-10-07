@@ -45,13 +45,22 @@ import (
 	"github.com/scionproto/scion/go/lib/spath"
 )
 
+const (
+	logLevelError = iota
+	logLevelInfo
+	logLevelDebug
+)
+
+var currentLogLevel = logLevelDebug
 var localAddress *snet.Addr
 var connections = make(map[int]snet.Conn)
 
 // -------------------------------------------------------------------------
 
-func dbg(format string, args ...interface{}) {
-	fmt.Printf(format+"\n", args...)
+func log(level int, format string, args ...interface{}) {
+	if level <= currentLogLevel {
+		fmt.Printf(format+"\n", args...)
+	}
 }
 
 type CError *C.char
@@ -71,6 +80,13 @@ func initialized() bool {
 }
 
 // -------------------------------------------------------------------------
+
+//export SetLogLevel
+func SetLogLevel(level int) {
+	if level >= 0 && level <= logLevelDebug {
+		currentLogLevel = level
+	}
+}
 
 //export Init
 func Init() CError {
@@ -103,8 +119,7 @@ func LocalAddress(retLocalAddress **C.char) CError {
 	if localAddress == nil {
 		return cerr("Exception: local address is nil")
 	}
-	cstr := C.CString(localAddress.String())
-	*retLocalAddress = cstr
+	*retLocalAddress = C.CString(fmt.Sprintf("%s,[%v]", localAddress.IA, localAddress.Host.L3))
 	return nil
 }
 
@@ -133,6 +148,7 @@ func Paths(retPathsLength *C.size_t, retPaths **C.PathReplyEntry, pDst *C.char) 
 		pathReplyEntryToCStruct(centry, p.Entry)
 		i++
 	}
+	log(logLevelDebug, "Returning %d paths", *retPathsLength)
 	return nil
 }
 
@@ -197,21 +213,22 @@ func findFreeDescriptor(conn snet.Conn) (int, error) {
 		}
 	}
 	if k == 4096 {
+		log(logLevelError, "Did not find a free descriptor")
 		return 0, fmt.Errorf("Connection descriptor table full")
 	}
 	connections[k] = conn
 	return k, nil
 }
 
-//export Open
-func Open(pFd *C.long, pHostAddress *C.char, cpath *C.PathReplyEntry) CError {
+//export Connect
+func Connect(pFd *C.long, pHostAddress *C.char, cpath *C.PathReplyEntry) CError {
 	dst := C.GoString(pHostAddress)
 	dstAddress, err := snet.AddrFromString(dst)
 	if err != nil {
 		return errorToCString(err)
 	}
-	dbg("Go: opened %v ; host addr: %+v", dstAddress, dstAddress.Host)
-	dbg("L3 = %+v ; L4 = %+v", dstAddress.Host.L3, dstAddress.Host.L4)
+	log(logLevelInfo, "Oopened %v ; host addr: %+v", dstAddress, dstAddress.Host)
+	log(logLevelDebug, "L3 = %+v ; L4 = %+v", dstAddress.Host.L3, dstAddress.Host.L4)
 	if dstAddress.Host.L4 == nil {
 		return cerr("Unspecified port number")
 	}
@@ -274,6 +291,8 @@ func cPathToPathReplyEntry(centry *C.PathReplyEntry) (*sciond.PathReplyEntry, er
 func Close(fd C.long) CError {
 	conn, found := connections[int(fd)]
 	if !found {
+		log(logLevelInfo, "Did not find the descriptor %d. Current table has %d entries",
+			fd, len(connections))
 		return cerr("Bad descriptor")
 	}
 	err := conn.Close()
@@ -288,6 +307,8 @@ func Close(fd C.long) CError {
 func Write(fd C.long, bytes *C.uchar, count C.size_t) CError {
 	conn, found := connections[int(fd)]
 	if !found {
+		log(logLevelInfo, "Did not find the descriptor %d. Current table has %d entries",
+			fd, len(connections))
 		return cerr("Bad descriptor")
 	}
 	n, err := conn.Write(C.GoBytes(unsafe.Pointer(bytes), C.int(count)))
@@ -321,6 +342,8 @@ func Listen(pFd *C.long, port C.ushort) CError {
 func Read(bytesRead *C.size_t, pClientAddr **C.char, fd C.long, buffer *C.uchar, bufLength C.size_t) CError {
 	conn, found := connections[int(fd)]
 	if !found {
+		log(logLevelInfo, "Did not find the descriptor %d. Current table has %d entries",
+			fd, len(connections))
 		return cerr("Bad descriptor")
 	}
 	buff := make([]byte, int(bufLength))
@@ -328,7 +351,6 @@ func Read(bytesRead *C.size_t, pClientAddr **C.char, fd C.long, buffer *C.uchar,
 	if err != nil {
 		return errorToCString(err)
 	}
-	dbg("Read %d bytes from %s", n, clientAddr)
 	*bytesRead = C.size_t(n)
 	*pClientAddr = C.CString(clientAddr.String())
 	// copy bytes using an unsafe.Pointer "cast" (aka void*)
