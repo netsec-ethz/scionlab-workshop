@@ -3,7 +3,7 @@ import time
 import csv
 
 
-PACKET_COUUNT = 1000
+PACKET_COUNT = 1000
 
 def main():
     print('Setting log level')
@@ -14,9 +14,9 @@ def main():
     for size in range(10, 60000, 1000):
         print(size)
         t0 = time.time()
-        send(packet_count=PACKET_COUUNT, size=size)
+        send(packet_count=PACKET_COUNT, size=size)
         t1 = time.time()
-        results.append( (size, (t1-t0)/PACKET_COUUNT) )
+        results.append( (size, (t1-t0)/PACKET_COUNT) )
     with open('/tmp/results.csv', mode='w') as f:
         w = csv.writer(f)
         w.writerow(('size', 'time'))

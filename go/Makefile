@@ -3,7 +3,7 @@
 all: deps capi sink
 
 clean:
-	rm -f scion_api.so sink pyscion.pyc
+	rm -rf scion_api.so sink pyscion.pyc __pycache__
 
 deps:
 	govendor sync -v
