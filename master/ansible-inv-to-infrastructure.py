@@ -11,7 +11,7 @@ PLAYER_TIME = 30  # seconds
 BW_FACTOR_RANGE = 10
 
 def bytes_for_dest(bw_factor):
-    return SCIONLAB_FUN_THROUGHPUT * PLAYER_TIME * bw_factor / (8 * BW_FACTOR_RANGE)
+    return int(SCIONLAB_FUN_THROUGHPUT * PLAYER_TIME * bw_factor / (8 * BW_FACTOR_RANGE))
 
 SINK_SERVER_PORT = 12345
 
@@ -37,7 +37,10 @@ def inv_to_infra(inv):
         public_ip = data['ansible_host']
         scion_local_addr = data.get('scion_local_address', public_ip)
         scion_addr = '{},[{}]'.format(data['scion_ia'], scion_local_addr)
-        bw_factor  = data.get('bw_factor', 10)
+        # bw_factor  = data['link_quality_to_next_hop_trust']
+        # I don't actually think the scaling is a good idea -- I trust
+        # randomness more than this :D so I'll hardcode something
+        bw_factor = 10
         # I don't want to think, so let's just put both sources and sinks
         # everywhere :D
         src_addr_sz[scion_addr] = bytes_for_dest(bw_factor)
