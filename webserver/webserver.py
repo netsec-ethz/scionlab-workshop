@@ -146,7 +146,4 @@ def finish():
 
 
 if __name__ == '__main__':
-    cleanup_dir(TEAMS_DIR)
-    cleanup_dir(ROUNDS_DIR)
-    cleanup_dir(CONFIGS_DIR)
     app.run(host='0.0.0.0', port=os.getenv('PORT', 5000), threaded=True)
