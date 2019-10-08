@@ -8,9 +8,8 @@ from collections import defaultdict
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
-from influxdb import InfluxDBClient
-
 from gen_configs import read_addr
+from influxdb import InfluxDBClient
 from scoring.score_run import load_goals, score_run
 
 NUM_ROUNDS = 1000
@@ -49,7 +48,7 @@ INFLUX_DB = os.getenv("INFLUX_DB")
 INFLUX_ADDR = os.getenv("INFLUX_ADDR")
 
 
-def team_id(instring, length=6):
+def team_id(instring, length=12):
     return str(sha256(bytes(instring + SECRET, 'ascii')).hexdigest())[:length]
 
 
@@ -84,12 +83,6 @@ def most_recent_timestamp(dir):
             most_recent = cur_time
             file = cur
     return file
-
-
-def check_teamid(teamid, team_ids):
-    if teamid in team_ids:
-        return True
-    return False
 
 
 def prepare_round():
