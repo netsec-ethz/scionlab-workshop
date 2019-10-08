@@ -32,14 +32,15 @@ def load_results(filename):
 def score_run(goals, results):
     scores = defaultdict(list)
 
-    for res_src in results:
-        for res_dst in results[res_src]:
-            if res_src in goals and res_dst in goals[res_src]:
-                achieved = results[res_src][res_dst]
-                goal = goals[res_src][res_dst]
+    for goal_src in goals:
+        for goal_dst in goals[goal_src]:
+            if goal_src in results and goal_dst in results[goal_src]:
+                achieved = results[goal_src][goal_dst]
+                goal = goals[goal_src][goal_dst]
                 score = min(1.0, achieved / goal)
-                scores[res_src].append(score)
-
+                scores[goal_src].append(score)
+            else:
+                scores[goal_src].append(0.0)
     avg = {}
     for src in scores:
         avg[src] = sum(scores[src]) / len(scores[src])

@@ -29,26 +29,29 @@ def parse_args():
 
 def read_teamnames(filename):
     with open(filename, 'r') as infile:
-        names = infile.readlines()
-    names = [l.strip() for l in names]
-    return names
+        reader = csv.reader(infile)
+        t = [r for r in reader]
+    teamnames, team_ids = zip(*t)
+    return teamnames, team_ids
 
 
-def read_src_addr(filename):
-    return read_teamnames(filename)
-
-
-def read_dst_addr(filename):
+def read_addr(filename):
     with open(filename, 'r') as infile:
         data = csv.reader(infile)
         data = [a for a in data]
-    dst = [d[0].strip() for d in data]
-    size = [d[1].strip() for d in data]
-    return dst, size
+    target = [d[0].strip() for d in data]
+    size = [int(d[1].strip()) for d in data]
+    return target, size
 
 
-def generate_config(teams, src_addr, dst_addr, msg_size, dst_team):
-    select_src = random.sample(src_addr, k=len(teams))
+def generate_config(teams, src_addr, dst_addr, src_size, dst_size, dst_team):
+    idxs = list(range(len(src_addr)))
+    random_idx = random.sample(idxs, k=len(teams))
+    select_src = [src_addr[i] for i in random_idx]
+    select_src_sizes = [src_size[i] for i in random_idx]
+
+    print(select_src)
+    print(select_src_sizes)
 
     round_src = []
     round_dst = []
@@ -60,7 +63,9 @@ def generate_config(teams, src_addr, dst_addr, msg_size, dst_team):
         round_src += dst_team * [select_src[idx]]
         idxs_dst = random.sample(range(len(dst_addr)), dst_team)
         round_dst += [dst_addr[i] for i in idxs_dst]
-        round_msg_size += [msg_size[i] for i in idxs_dst]
+        src_msg_size = select_src_sizes[idx]
+        dst_msg_size = [dst_size[i] for i in idxs_dst]
+        round_msg_size += [min(src_msg_size, a) for a in dst_msg_size]
 
     result = {
         'teams': round_teams,
@@ -72,10 +77,12 @@ def generate_config(teams, src_addr, dst_addr, msg_size, dst_team):
     return result
 
 
-def generate_all_configs(rounds, teams, src_addr, dst_addr, msg_size, dst_team):
+def generate_all_configs(rounds, teams, src_addr, dst_addr, src_size, dst_size,
+                         dst_team):
     confs = []
     for round in range(rounds):
-        config = generate_config(teams, src_addr, dst_addr, msg_size, dst_team)
+        config = generate_config(teams, src_addr, dst_addr, src_size, dst_size,
+                                 dst_team)
         confs.append(config)
     return confs
 
@@ -95,9 +102,9 @@ def main():
     random.seed(42)
 
     args = parse_args()
-    teams = read_teamnames(args.teams)
-    src_addr = read_src_addr(args.sources)
-    dst_addr, msg_size = read_dst_addr(args.destinations)
+    teams, team_ids = read_teamnames(args.teams)
+    src_addr, src_size = read_addr(args.sources)
+    dst_addr, dst_size = read_addr(args.destinations)
 
     print("VISCON HACKATON CONFIG GENERATOR")
     print("There are:")
@@ -112,7 +119,7 @@ def main():
         raise ValueError("There are more teams than source IPs!")
 
     confs = generate_all_configs(args.rounds, teams, src_addr, dst_addr,
-                                 msg_size, args.dst_team)
+                                 src_size, dst_size, args.dst_team)
     write_configs(confs, args.out)
 
 
