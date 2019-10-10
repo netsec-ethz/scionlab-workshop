@@ -14,7 +14,7 @@ How this works:
 * The **master** takes care of running the user code on worker machines and collecting results from the sinks.
   * Code lives in `master/`.
 * We need to **generate the assignments and score the results** for each round.
-  * Code lives in `scoring/`.
+  * Code lives in `webserver/scoring/`.
 * The webserver pushes the scores into InfluxDB, and a **dashboard** is used to display them. 
   * This does not live in this repository.
 
