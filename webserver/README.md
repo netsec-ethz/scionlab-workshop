@@ -17,8 +17,7 @@ Then, run `./scionlab manage config` to generate the configs.
 ### Round preparation and round cleanup
 
 Before each round, `./scionlab manage prepare` prepares all the necessary files 
-in the `./rounds/cur-round` folder. This command will fail if cur-round already 
-exists.
+in the `./rounds/cur-round` folder.
 
 After each round, `./scionlab manage finish` collects the results of the 
 previous run and clears the `./rounds/cur-round` directory.

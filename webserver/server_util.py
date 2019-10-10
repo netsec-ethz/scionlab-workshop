@@ -8,12 +8,11 @@ from collections import defaultdict
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
-from influxdb import InfluxDBClient
-
 from gen_configs import read_addr
+from influxdb import InfluxDBClient
 from scoring.score_run import load_goals, score_run
 
-NUM_ROUNDS = 2
+NUM_ROUNDS = 1000
 DST_PER_ROUND = 3
 
 # Directory structure
@@ -49,7 +48,7 @@ INFLUX_DB = os.getenv("INFLUX_DB")
 INFLUX_ADDR = os.getenv("INFLUX_ADDR")
 
 
-def team_id(instring, length=6):
+def team_id(instring, length=12):
     return str(sha256(bytes(instring + SECRET, 'ascii')).hexdigest())[:length]
 
 
@@ -84,12 +83,6 @@ def most_recent_timestamp(dir):
             most_recent = cur_time
             file = cur
     return file
-
-
-def check_teamid(teamid, team_ids):
-    if teamid in team_ids:
-        return True
-    return False
 
 
 def prepare_round():
@@ -189,7 +182,6 @@ def get_last_round_num():
     cur_max = -1
     for name in round_names:
         if name != "cur-round":
-            print(name)
             round_num = int(name.split("-")[1])  # Round folders  `round-N`
             cur_max = max(cur_max, round_num)
     return cur_max
@@ -210,7 +202,7 @@ def finish_round():
     # Keep only the machines that actually have a team assigned
     machine_team = machine2team(cur_round)
     for cur_src, cur_team in machine_team.items():
-        log_name = f"{timestamp}_log"
+        log_name = f"{timestamp}-log"
         dst_path = os.path.join(TEAMS_DIR, cur_team, LOGS_SUBDIR, log_name)
         copyfile(os.path.join(round_dir, SOURCE_SUBDIR, cur_src, LOGNAME),
                  dst_path)
