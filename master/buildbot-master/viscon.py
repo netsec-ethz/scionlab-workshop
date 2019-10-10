@@ -13,8 +13,6 @@ from datetime import datetime
 from buildbot.plugins import *
 from buildbot.process.results import SUCCESS
 
-RUN = os.path.isfile('../RUN')
-
 ####### CONSTANTS
 
 ROUND_TICK  =  60  # How often we run a round, in seconds.
@@ -30,8 +28,7 @@ with open('../worker_to_ssh.csv') as f:
             PLAYERS[row[0]] = row[1:]
         elif row[0].startswith('sink-'):
             SINKS[row[0]] = row[1:]
-        else:
-            raise ValueError('wtf is {}'.format(row))
+        # ignore everything else
 
 # communication with webserver
 WEBSERVER_BASEURL = 'http://{}/'.format(os.environ['SERVER'])
@@ -46,14 +43,17 @@ def webserver_dir(what, id):
 # communication with sinks
 SINK_HTTP_PORT = 8080  # used for stats reset signalling
 
+RUN_FILE = os.path.abspath('../RUN')
 
 ####### WORKERS
 
 BUILDBOT_WORKERS_PASSWORD = os.environ['BUILDBOT_WORKERS_PASSWORD']
+
+DUMMY_WORKER = 'dummy'
 # The 'workers' list defines the set of recognized workers. Each element is
 # a tuple of the shape (worker name, password).  The same
 # worker name and password must be configured on the worker.
-workers = [(p, BUILDBOT_WORKERS_PASSWORD) for p in (list(PLAYERS.keys())+list(SINKS.keys()))]
+workers = [(p, BUILDBOT_WORKERS_PASSWORD) for p in (list(PLAYERS.keys())+list(SINKS.keys())+[DUMMY_WORKER])]
 
 
 ####### ROUND/SCHEDULERS
@@ -104,12 +104,13 @@ builders = []
 #### 1. Prepare round
 
 start_round_factory = util.BuildFactory()
+start_round_factory.addStep(steps.FileExists(file=RUN_FILE))  # only run if we're enabled
 start_round_factory.addStep(steps.GET(WEBSERVER_URL+'/prepare'))
 
 builders += [util.BuilderConfig(
     name="start-round",
     factory=start_round_factory,
-    workernames=[workers[-1][0]],  # dummy
+    workernames=[DUMMY_WORKER],
 )]
 
 #### 2. Run players
@@ -183,7 +184,7 @@ finish_round_factory.addStep(steps.GET(WEBSERVER_URL+'/finish'))
 
 builders += [util.BuilderConfig(
     name="finish-round",
-    workernames=[workers[-1][0]],  # dummy
+    workernames=[DUMMY_WORKER],
     factory=finish_round_factory,
 )]
 
@@ -197,8 +198,3 @@ port        = 8010
 buildbotURL = "http://localhost:{}/".format(port)
 titleURL    = buildbotURL
 title       = "SCIONLab Workshop"
-
-####### RUN TOGGLE
-
-if not RUN:
-    ...

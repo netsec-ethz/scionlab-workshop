@@ -15,7 +15,11 @@ def bytes_for_dest(bw_factor):
 
 SINK_SERVER_PORT = 12345
 
-ANSIBLE_SSH_USER = 'ubuntu'  # :D
+SSH_USER = 'runner'
+
+WITH_DUMMY = True
+DUMMY_SSH_USER = 'ubuntu'
+DUMMY_HOST = 'viscon-netsec-eosmd7'
 
 def find_hosts(inv):
     for k, v in inv.items():
@@ -33,7 +37,9 @@ def inv_to_infra(inv):
     dst_addr_sz   = {}  # sink node SCION address   => bandwidth factor
     worker_to_ssh = {}  # source node SCION address => user@hostname
     for name, data in find_hosts(inv):
-        if not 'scion_ia' in data: continue  # not a SCION node, ignore
+        if WITH_DUMMY and name == DUMMY_HOST:
+            worker_to_ssh['dummy'] = (None, '{}@{}'.format(DUMMY_SSH_USER, data['ansible_host']))
+            continue
         public_ip = data['ansible_host']
         scion_local_addr = data.get('scion_local_address', public_ip)
         scion_addr = '{},[{}]'.format(data['scion_ia'], scion_local_addr)
@@ -45,8 +51,8 @@ def inv_to_infra(inv):
         # everywhere :D
         src_addr_sz[scion_addr] = bytes_for_dest(bw_factor)
         dst_addr_sz[scion_addr] = bytes_for_dest(bw_factor)
-        worker_to_ssh['source-'+name] = (scion_addr, '{}@{}'.format(ANSIBLE_SSH_USER, public_ip))
-        worker_to_ssh['sink-'+name]   = (scion_addr, '{}@{}'.format(ANSIBLE_SSH_USER, public_ip))
+        worker_to_ssh['source-'+name] = (scion_addr, '{}@{}'.format(SSH_USER, public_ip))
+        worker_to_ssh['sink-'+name]   = (scion_addr, '{}@{}'.format(SSH_USER, public_ip))
 
     return src_addr_sz, dst_addr_sz, worker_to_ssh
 
