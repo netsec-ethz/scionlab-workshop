@@ -33,7 +33,6 @@ def send(packet_count, size):
         for i in range(packet_count):
             total_sent += size
             fd.write(b'a'*size)
-            # fd.write_n(size)
 
 if __name__ == "__main__":
     main()
