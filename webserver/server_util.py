@@ -262,7 +262,7 @@ def _create_point_list(teamscores, round_n):
                 "time": timestamp,
                 "fields": {
                     "value": score,
-                    "round_as_field": round_n
+                    "round_as_field": int(round_n)
                 }
             }
         )
