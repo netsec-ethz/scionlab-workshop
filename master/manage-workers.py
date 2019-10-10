@@ -16,14 +16,12 @@ WRKDIR         = '/tmp/buildbot-workers'
 @click.option('--dry-run', 'prompting', flag_value='dry', help='Only print commands, do not prompt to run')
 @click.option('--yes',     'prompting', flag_value='yes', help='Run commands without prompting')
 @click.pass_context
-def cli(ctx, ssh, filename, prompting, wrkdir):
+def cli(ctx, filename, **kwargs):
     """Manage workers according to a workers.csv file"""
     ctx.ensure_object(dict)
     with open(filename) as f:
-        ctx.obj['ssh'] = ssh
-        ctx.obj['wrkdir'] = wrkdir
-        ctx.obj['prompting'] = prompting
         ctx.obj['workers'] = {row[0]: row[1:] for row in csv.reader(f)}
+        ctx.obj['args']    = kwargs
 
 def print_and_run(cmds, prompting=None):
     for cmd in cmds:
@@ -44,14 +42,14 @@ def sshcmd(host, cmd):
 @click.option('--master', default='localhost', help='Buildbot master hostname[:port]')
 @click.pass_context
 def create(ctx, passwd, master):
-    wrkdir = ctx.obj['wrkdir']
-    ssh    = ctx.obj['ssh']
+    wrkdir = ctx.obj['args']['wrkdir']
+    ssh    = ctx.obj['args']['ssh']
     c = sshcmd if ssh else lambda h, cmd: cmd
 
     cmds = []
     if not ssh: cmds.append('mkdir -p "{}"'.format(wrkdir))
     for name, (scion_addr, host) in ctx.obj['workers'].items():
-        create = 'buildbot-worker create-worker "{mydir}" {master} {name} {passwd}'.format(
+        create = 'buildbot-worker create-worker -f "{mydir}" {master} {name} {passwd}'.format(
             mydir=os.path.join(wrkdir, 'worker-{}'.format(name)),
             master=master,
             name=name,
@@ -62,13 +60,13 @@ def create(ctx, passwd, master):
         else:
             cmds.append(create)
 
-    print_and_run(cmds, ctx.obj['prompting'])
+    print_and_run(cmds, ctx.obj['args']['prompting'])
 
 @cli.command()
 @click.pass_context
 def start(ctx):
-    wrkdir = ctx.obj['wrkdir']
-    ssh    = ctx.obj['ssh']
+    wrkdir = ctx.obj['args']['wrkdir']
+    ssh    = ctx.obj['args']['ssh']
     c = sshcmd if ssh else lambda h, cmd: cmd
 
     cmds = []
@@ -77,7 +75,22 @@ def start(ctx):
             mydir=os.path.join(wrkdir, 'worker-{}'.format(name)),
         )))
 
-    print_and_run(cmds, ctx.obj['prompting'])
+    print_and_run(cmds, ctx.obj['args']['prompting'])
+
+@cli.command()
+@click.pass_context
+def stop(ctx):
+    wrkdir = ctx.obj['args']['wrkdir']
+    ssh    = ctx.obj['args']['ssh']
+    c = sshcmd if ssh else lambda h, cmd: cmd
+
+    cmds = []
+    for name, (scion_addr, host) in ctx.obj['workers'].items():
+        cmds.append(c(host, 'buildbot-worker stop "{mydir}"'.format(
+            mydir=os.path.join(wrkdir, 'worker-{}'.format(name)),
+        )))
+
+    print_and_run(cmds, ctx.obj['args']['prompting'])
 
 
 if __name__ == '__main__':
