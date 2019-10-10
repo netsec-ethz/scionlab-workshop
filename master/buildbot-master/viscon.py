@@ -118,18 +118,25 @@ builders += [util.BuilderConfig(
 def player_factory_factory(player_id):
     player_factory = util.BuildFactory()
 
+    src_addr = PLAYERS[player_id][0]
+    src_name = player_id[len('source-'):]
     nowstr     = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
-    source_dir = webserver_dir('source', PLAYERS[player_id][0])
+    source_dir = webserver_dir('source', src_addr)
     task_file  = os.path.join(source_dir, 'round.txt')
     code_file  = os.path.join(source_dir, 'submit.py')
     log_file   = os.path.join(source_dir, 'log')  # why not at least output.log or something
-    run_cmd    = ['sh', '-c', 'python3 ./submit.py < ./round.txt > ./output.log 2>&1 || true']  # :D
+    run_cmd    = ['sh', '-c', 'python3 ./submit.py < ./round.txt >> ./output.log 2>&1 || true']  # :D
 
     # 1. put the task file and user's code on the worker
     player_factory.addStep(steps.FileDownload(mastersrc=task_file,
                                               workerdest='./round.txt'))
     player_factory.addStep(steps.FileDownload(mastersrc=code_file,
                                               workerdest='./submit.py'))
+    loghdr = '# running on: {} ({})\n'.format(src_addr, src_name)
+    player_factory.addStep(steps.StringDownload(loghdr,
+                                                workerdest="output.log"))
+
+
 
     # 2. run it
     # player_factory.addStep(steps.ShellCommand(command=['cp']+API_FILES+['.']))
