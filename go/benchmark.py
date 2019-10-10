@@ -4,6 +4,7 @@ import csv
 
 
 PACKET_COUNT = 1000
+total_sent = 0
 
 def main():
     print('Setting log level')
@@ -25,11 +26,15 @@ def main():
 
 
 def send(packet_count, size):
+    global total_sent
     destination = local_address()+':12345'
     p = paths(destination)
     with connect(destination, p[0]) as fd:
         for i in range(packet_count):
+            total_sent += size
             fd.write(b'a'*size)
+            # fd.write_n(size)
 
 if __name__ == "__main__":
     main()
+    print('Total sent: %d' % total_sent)

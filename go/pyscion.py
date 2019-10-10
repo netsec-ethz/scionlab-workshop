@@ -4,6 +4,7 @@ __all__ = ['SCIONException', 'HostInfo', 'FwdPathMeta', 'Interface', 'Path', 'co
 from ctypes import *
 from collections import namedtuple
 from ipaddress import IPv4Address
+from array import array
 
 
 _lib = cdll.LoadLibrary('./scion_api.so')
@@ -126,6 +127,9 @@ class connect:
     def write(self, buffer):
         return _call_write(self.fd, buffer)
 
+    def write_n(self, count):
+        return _call_write_n(self.fd, count)
+
     def read(self, buffer):
         return _call_read(self.fd, buffer)
 
@@ -198,8 +202,17 @@ def _call_close(fd):
 _lib.Write.argtypes = [c_long, POINTER(c_char), c_size_t]
 _lib.Write.restype = c_char_p
 def _call_write(fd, buffer):
-    cbuffer = (c_char * len(buffer))(*buffer)
-    err = _lib.Write(fd, cbuffer, len(buffer))
+    addr, count = array('B', buffer).buffer_info()
+    assert count == len(buffer)
+    ptr = cast(addr,POINTER(c_char))
+    err = _lib.Write(fd, ptr, len(buffer))
+    if err != None:
+        raise SCIONException(err)
+
+_lib.WriteN.argtypes = [c_long, c_size_t]
+_lib.WriteN.restype = c_char_p
+def _call_write_n(fd, count):
+    err = _lib.WriteN(fd, count)
     if err != None:
         raise SCIONException(err)
 
