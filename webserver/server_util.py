@@ -1,6 +1,4 @@
 """Utilities for the management of webserver directories."""
-import csv
-import datetime
 import os
 import re
 import shutil
@@ -8,8 +6,11 @@ from collections import defaultdict
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
-from gen_configs import read_addr
+import csv
+import datetime
 from influxdb import InfluxDBClient
+
+from gen_configs import read_addr
 from scoring.score_run import load_goals, score_run
 
 NUM_ROUNDS = 1000
@@ -102,19 +103,20 @@ def prepare_round():
     os.mkdir(os.path.join(CUR_ROUND_DIR, "sink"))
 
     # Get the config with the teamname-source mappings.
-    all_sources, _ = read_addr(SOURCES)
+    used_sources = set()
     config_name = os.path.join(CONFIGS_DIR, f"config_round_{cur_round}.csv")
     with open(config_name, 'r') as infile:
         reader = csv.reader(infile)
         for row in reader:
             move_code_to_source(row[0], row[1])
             _prepare_config_run(row[1], row[2], row[3])
-            try:
-                all_sources.remove(row[1])  # Remove the machine from the list
-            except ValueError:
-                print("Machine already considered")
-    for leftover in all_sources:
-        _create_empty_entry(leftover)
+        used_sources.add(row[1])
+
+    # Add the defaults for the sources that were not used
+    all_sources, _ = read_addr(SOURCES)
+    for cur_src in all_sources:
+        if cur_src not in used_sources:
+            _create_empty_entry(cur_src)
 
 
 def _prepare_config_run(src, dst, nbytes):
@@ -136,18 +138,18 @@ def _create_empty_entry(source):
                                  SOURCE_SUBDIR,
                                  source))
 
-    dst = os.path.join(CUR_ROUND_DIR,
-                       SOURCE_SUBDIR,
-                       source,
-                       f"{SUBMIT_NAME}.py")
-    with open(dst, 'w') as outfile:
+    dst_code = os.path.join(CUR_ROUND_DIR,
+                            SOURCE_SUBDIR,
+                            source,
+                            f"{SUBMIT_NAME}.py")
+    with open(dst_code, 'w') as outfile:
         outfile.write(NULL_CODE)
 
-    dst = os.path.join(CUR_ROUND_DIR,
-                       SOURCE_SUBDIR,
-                       source,
-                       f"{ROUND_CONFIG}")
-    with open(dst, 'w') as outfile:
+    dst_conf = os.path.join(CUR_ROUND_DIR,
+                            SOURCE_SUBDIR,
+                            source,
+                            f"{ROUND_CONFIG}")
+    with open(dst_conf, 'w') as outfile:
         outfile.write("\n")
 
 
@@ -173,7 +175,8 @@ def move_code_to_source(teamname, source):
                            source,
                            f"{SUBMIT_NAME}.py")
         copyfile(os.path.join(team_code_dir, recent_code), dst)
-
+    else:
+        raise RuntimeError(f"There is no submission code in {team_code_dir}")
 
 def get_last_round_num():
     round_names = os.listdir(ROUNDS_DIR)
