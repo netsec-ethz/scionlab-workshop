@@ -233,7 +233,7 @@ def finish_round():
 
 
 def machine2team(cur_round):
-    """Compute the map from teams to machines."""
+    """Compute the map from machines to teams."""
     # Get the config with the teamname-source mappings.
     config_name = f"configs/config_round_{cur_round}.csv"
     machine_team = {}
@@ -243,6 +243,16 @@ def machine2team(cur_round):
             machine_team[row[1]] = row[0]
     return machine_team
 
+def team2machine(cur_round):
+    """Compute the map from teams to machines."""
+    # Get the config with the teamname-source mappings.
+    config_name = f"configs/config_round_{cur_round}.csv"
+    team_machine = {}
+    with open(config_name, 'r') as infile:
+        reader = csv.reader(infile)
+        for row in reader:
+            team_machine[row[0]] = row[1]
+    return team_machine
 
 def _push_to_influxdb(teamscores, round_n):
     points = _create_point_list(teamscores, round_n)
