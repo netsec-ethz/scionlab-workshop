@@ -24,8 +24,10 @@ const PORT = 12345
 
 var localAddress *snet.Addr
 
-// scoreBoard is a map[addr.IA] = uint64
-var scoreBoard *sync.Map = new(sync.Map)
+// scoreBoard is a map[addr.IA.String()] = uint64
+var scoreBoard = make(map[string]uint64)
+
+var scoreBoardMutex sync.Mutex
 
 type ScoreEntry struct {
 	Who        string
@@ -80,14 +82,9 @@ func handleClients(conn snet.Conn) {
 func handleScore(scoreChan chan ScoreEntry) {
 	for {
 		e := <-scoreChan
-		board := scoreBoard
-		actual, found := board.Load(e.Who)
-		if !found {
-			actual = interface{}(uint64(0))
-		}
-		s := actual.(uint64)
-		s += e.NumPackets
-		board.Store(e.Who, s)
+		scoreBoardMutex.Lock()
+		scoreBoard[e.Who] += e.NumPackets
+		scoreBoardMutex.Unlock()
 	}
 }
 
@@ -105,21 +102,21 @@ func sendAck(conn snet.Conn, clientAddr *snet.Addr, message uint16) {
 }
 
 func dumpScoreBoard() {
-	board := scoreBoard
-	scoreBoard = new(sync.Map)
+	scoreBoardMutex.Lock()
+	defer scoreBoardMutex.Unlock()
+
 	fmt.Println("dumping score now")
 	fileName := "/tmp/scores.txt"
 	lines := make([]byte, 0)
-	board.Range(func(_addr, _n interface{}) bool {
-		addr := _addr.(string)
-		n := _n.(uint64)
+	for addr, n := range scoreBoard {
 		lines = append(lines, ([]byte)(fmt.Sprintf("%s\t%d\n", addr, n))...)
-		return true
-	})
+	}
 	err := ioutil.WriteFile(fileName, lines, 0644)
 	if err != nil {
 		logError("Error writing scores: %v", err)
 	}
+	scoreBoard = make(map[string]uint64)
+
 }
 
 func initHTTP() {
