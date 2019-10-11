@@ -102,21 +102,18 @@ def prepare_round():
     os.mkdir(os.path.join(CUR_ROUND_DIR, "source"))
     os.mkdir(os.path.join(CUR_ROUND_DIR, "sink"))
 
+    # Add the defaults for the sources that were not used
+    all_sources, _ = read_addr(SOURCES)
+    for cur_src in all_sources:
+        _create_empty_entry(cur_src)
+
     # Get the config with the teamname-source mappings.
-    used_sources = set()
     config_name = os.path.join(CONFIGS_DIR, f"config_round_{cur_round}.csv")
     with open(config_name, 'r') as infile:
         reader = csv.reader(infile)
         for row in reader:
             move_code_to_source(row[0], row[1])
             _prepare_config_run(row[1], row[2], row[3])
-        used_sources.add(row[1])
-
-    # Add the defaults for the sources that were not used
-    all_sources, _ = read_addr(SOURCES)
-    for cur_src in all_sources:
-        if cur_src not in used_sources:
-            _create_empty_entry(cur_src)
 
 
 def _prepare_config_run(src, dst, nbytes):
@@ -170,11 +167,13 @@ def move_code_to_source(teamname, source):
                                            SOURCE_SUBDIR,
                                            source)):
             os.makedirs(os.path.join(CUR_ROUND_DIR, SOURCE_SUBDIR, source))
+        # Clear the destination folder
         dst = os.path.join(CUR_ROUND_DIR,
                            SOURCE_SUBDIR,
-                           source,
-                           f"{SUBMIT_NAME}.py")
-        copyfile(os.path.join(team_code_dir, recent_code), dst)
+                           source,)
+        dst_file = os.path.join(dst, f"{SUBMIT_NAME}.py")
+        rmtree(dst)
+        copyfile(os.path.join(team_code_dir, recent_code), dst_file)
     else:
         raise RuntimeError(f"There is no submission code in {team_code_dir}")
 
