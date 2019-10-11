@@ -161,18 +161,13 @@ def move_code_to_source(teamname, source):
     """
     team_code_dir = os.path.join(TEAMS_DIR, teamname, CODE_SUBDIR)
     recent_code = most_recent_timestamp(team_code_dir)
+    dst = os.path.join(CUR_ROUND_DIR,
+                       SOURCE_SUBDIR,
+                       source)
     if recent_code is not None:
-        # Copy the file over to the appropriate source
-        if not os.path.exists(os.path.join(CUR_ROUND_DIR,
-                                           SOURCE_SUBDIR,
-                                           source)):
-            os.makedirs(os.path.join(CUR_ROUND_DIR, SOURCE_SUBDIR, source))
+        cleanup_dir(dst)
         # Clear the destination folder
-        dst = os.path.join(CUR_ROUND_DIR,
-                           SOURCE_SUBDIR,
-                           source,)
         dst_file = os.path.join(dst, f"{SUBMIT_NAME}.py")
-        rmtree(dst)
         copyfile(os.path.join(team_code_dir, recent_code), dst_file)
     else:
         raise RuntimeError(f"There is no submission code in {team_code_dir}")
