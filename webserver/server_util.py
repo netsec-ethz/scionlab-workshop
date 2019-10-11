@@ -147,7 +147,7 @@ def _create_empty_entry(source):
                             source,
                             f"{ROUND_CONFIG}")
     with open(dst_conf, 'w') as outfile:
-        outfile.write("\n")
+        outfile.write("")
 
 
 def move_code_to_source(teamname, source):
@@ -165,8 +165,6 @@ def move_code_to_source(teamname, source):
                        SOURCE_SUBDIR,
                        source)
     if recent_code is not None:
-        cleanup_dir(dst)
-        # Clear the destination folder
         dst_file = os.path.join(dst, f"{SUBMIT_NAME}.py")
         copyfile(os.path.join(team_code_dir, recent_code), dst_file)
     else:
