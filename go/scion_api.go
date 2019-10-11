@@ -96,17 +96,19 @@ func Init() CError {
 	// find local IA, dispatcher and sciond paths
 	localAddressStr, err := scionutil.GetLocalhostString()
 	if err != nil {
-		errorToCString(err)
+		return errorToCString(err)
 	}
+	log(logLevelDebug, "Local address string is: %s", localAddressStr)
 	localAddress, err = snet.AddrFromString(localAddressStr)
 	if err != nil {
-		errorToCString(err)
+		return errorToCString(err)
 	}
 	dispatcherPath := scionutil.GetDefaultDispatcher()
 	sciondPath := sciond.GetDefaultSCIONDPath(nil)
+	log(logLevelDebug, "localAddress: %+v , dispatcherPath: %+v , sciondPath: %+v", localAddress, dispatcherPath, sciondPath)
 	err = snet.Init(localAddress.IA, sciondPath, dispatcherPath)
 	if err != nil {
-		errorToCString(err)
+		return errorToCString(err)
 	}
 	return nil
 }
@@ -311,7 +313,25 @@ func Write(fd C.long, bytes *C.uchar, count C.size_t) CError {
 			fd, len(connections))
 		return cerr("Bad descriptor")
 	}
-	n, err := conn.Write(C.GoBytes(unsafe.Pointer(bytes), C.int(count)))
+	buff := C.GoBytes(unsafe.Pointer(bytes), C.int(count))
+	n, err := conn.Write(buff)
+	_ = n
+	if err != nil {
+		return errorToCString(err)
+	}
+	return nil
+}
+
+//export WriteN
+func WriteN(fd C.long, count C.size_t) CError {
+	conn, found := connections[int(fd)]
+	if !found {
+		log(logLevelInfo, "Did not find the descriptor %d. Current table has %d entries",
+			fd, len(connections))
+		return cerr("Bad descriptor")
+	}
+	buff := make([]byte, int(count))
+	n, err := conn.Write(buff)
 	_ = n
 	if err != nil {
 		return errorToCString(err)
