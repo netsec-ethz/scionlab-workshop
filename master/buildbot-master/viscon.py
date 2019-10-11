@@ -15,7 +15,7 @@ from buildbot.process.results import SUCCESS
 
 ####### CONSTANTS
 
-ROUND_TICK  =  60  # How often we run a round, in seconds.
+ROUND_TICK  =  90  # How often we run a round, in seconds.
                    # Drives the round-tick scheduler.
 PLAYER_TIME =  30  # How long the player code runs in each round, in seconds.
                    # Sets player running time.
@@ -125,7 +125,7 @@ def player_factory_factory(player_id):
     task_file  = os.path.join(source_dir, 'round.txt')
     code_file  = os.path.join(source_dir, 'submit.py')
     log_file   = os.path.join(source_dir, 'log')  # why not at least output.log or something
-    run_cmd    = ['sh', '-c', 'python3 ./submit.py < ./round.txt >> ./output.log 2>&1 || true']  # :D
+    run_cmd    = ['sh', '-c', 'python3 ./submit.py < ./round.txt 2>&1 >> ./output.log']  # :D
 
     # 1. put the task file and user's code on the worker
     player_factory.addStep(steps.FileDownload(mastersrc=task_file,
@@ -136,15 +136,14 @@ def player_factory_factory(player_id):
     player_factory.addStep(steps.StringDownload(loghdr,
                                                 workerdest="output.log"))
 
-
-
     # 2. run it
     # player_factory.addStep(steps.ShellCommand(command=['cp']+API_FILES+['.']))
     player_factory.addStep(steps.ShellCommand(command=run_cmd,
                                               maxTime=PLAYER_TIME,
                                               sigtermTime=1,
-                                              logfiles={'userout': './output.log'},
+                                              #logfiles={'userout': './output.log'},
                                               decodeRC={i: SUCCESS for i in range(-256,256)}))
+    player_factory.addStep(steps.ShellCommand(command=['truncate', '--size', '10000', './output.log'])) 
     # 3. give the code's output back to the users
     player_factory.addStep(steps.FileUpload(workersrc='./output.log',
                                             masterdest=log_file))
