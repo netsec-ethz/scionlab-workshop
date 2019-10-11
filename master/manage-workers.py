@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# THIS FILE IS A HORRIBLE MESS AND YOU MAY GET CANCER FROM LOOKING AT IT
+# but you know what? it works :D
 
 import csv
 import click
@@ -89,6 +91,36 @@ def stop(ctx):
         cmds.append(c(host, 'buildbot-worker stop "{mydir}"'.format(
             mydir=os.path.join(wrkdir, 'worker-{}'.format(name)),
         )))
+
+    print_and_run(cmds, ctx.obj['args']['prompting'])
+
+@cli.command()
+@click.pass_context
+def startsink(ctx):
+    ssh    = ctx.obj['args']['ssh']
+    c = sshcmd if ssh else lambda h, cmd: cmd
+
+    cmds = []
+    for name, (scion_addr, host) in ctx.obj['workers'].items():
+        cmds.append(c(host, 'nohup ./sink > /dev/null 2>&1 < /dev/null &'))
+
+    print_and_run(cmds, ctx.obj['args']['prompting'])
+
+@cli.command()
+@click.pass_context
+@click.argument('cmd')
+@click.option('--user', default=None, help='Run as the specified user instead')
+def runcmd(ctx, cmd, user):
+    wrkdir = ctx.obj['args']['wrkdir']
+    ssh    = ctx.obj['args']['ssh']
+    c = sshcmd if ssh else lambda h, cmd: cmd
+
+    cmds = []
+    for name, (scion_addr, host) in ctx.obj['workers'].items():
+        if user:
+            default_user, hostname = host.split('@')
+            host = '{}@{}'.format(user, hostname)
+        cmds.append(c(host, cmd))
 
     print_and_run(cmds, ctx.obj['args']['prompting'])
 
