@@ -1,5 +1,5 @@
+"""Mock pyscion API that you can use to run your code locally.
 
-"""
 The API consists of:
 - set_log_level(level)
 - init()
@@ -11,7 +11,6 @@ The API consists of:
 - fd = listen(port)
 - addr, n = fd.read(buffer)
 """
-
 
 
 class SCIONException(Exception):
