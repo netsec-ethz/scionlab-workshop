@@ -10,9 +10,52 @@ More formally:
 import os
 from collections import defaultdict
 from hashlib import sha256
-from server_util import ROUNDS_DIR, CUR_ROUND, machine2team, SOURCE_SUBDIR, SUBMIT_NAME
+
 import json
 from pprint import pprint
+import csv
+
+SOURCE_SUBDIR = "source/"
+ROUNDS_DIR = "rounds/"
+CUR_ROUND = "cur-round"
+SUBMIT_NAME = "submit"
+
+
+def team2machine(cur_round):
+    """Compute the map from teams to machines."""
+    # Get the config with the teamname-source mappings.
+    config_name = f"configs/config_round_{cur_round}.csv"
+    team_machine = {}
+    with open(config_name, 'r') as infile:
+        reader = csv.reader(infile)
+        for row in reader:
+            team_machine[row[0]] = row[1]
+    return team_machine
+
+def machine2team(cur_round):
+    """Compute the map from machines to teams."""
+    # Get the config with the teamname-source mappings.
+    config_name = f"configs/config_round_{cur_round}.csv"
+    machine_team = {}
+    with open(config_name, 'r') as infile:
+        reader = csv.reader(infile)
+        for row in reader:
+            machine_team[row[1]] = row[0]
+    return machine_team
+
+def get_code_team_round(team, round):
+    tm = team2machine(round)
+    cur_machine = tm[team]
+    codepath = os.path.join(ROUNDS_DIR, f"round-{round}", SOURCE_SUBDIR,
+                            cur_machine, f"{SUBMIT_NAME}.py")
+    try:
+        with open(codepath, 'r') as infile:
+            code = infile.read()
+    except:
+        print("NO CODE FOUND")
+        return "NO CODE"
+    return code
+
 
 round_dirs = os.listdir(ROUNDS_DIR)
 
@@ -26,7 +69,7 @@ max_round = max([int(x.split('-')[1]) for x in round_dirs])
 
 # Go through the rounds and get a hash of the code
 teamcode = defaultdict(list)
-for idx in range(max_round + 1):   # Count also the last round
+for idx in range(max_round + 1):  # Count also the last round
     mt = machine2team(idx)
     src_dir = os.path.join(ROUNDS_DIR, f"round-{idx}", SOURCE_SUBDIR)
     for cur_source in os.listdir(src_dir):
@@ -52,11 +95,22 @@ with open('teamhashes.json', 'w') as outfile:
 for team in teamcode:
     last_hash = None
     seen_hashes = []
+    print(team)
     pprint(teamcode[team][:10])
     for idx, cur_hash in enumerate(teamcode[team]):
         if cur_hash != last_hash and cur_hash in teamcode[team][:idx]:
+            print("-" * 80)
             print(f"PROBLEM for team {team} in round {idx}")
-            print(f"The same code was found in pos {teamcode[team].index(cur_hash)}")
+            other_idx = teamcode[team].index(cur_hash)
+            print(f"The same code was found in pos {other_idx}")
+            print(f"ROUND {idx}", " >" * 10)
+            c1 = (get_code_team_round(team, idx))
+            print(c1)
+            print(f"ROUND BEFORE {idx-1}", " <" * 10)
+            c2 = (get_code_team_round(team, idx-1))
+            print(c2)
+            print("====")
+            print("Hashes:")
+            print(str(sha256(bytes(c1, 'utf-8')).hexdigest()))
+            print(str(sha256(bytes(c2, 'utf-8')).hexdigest()))
         last_hash = cur_hash
-
-
