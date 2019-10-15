@@ -1,6 +1,4 @@
 """Utilities for the management of webserver directories."""
-import csv
-import datetime
 import os
 import re
 import shutil
@@ -8,8 +6,11 @@ from collections import defaultdict
 from hashlib import sha256
 from shutil import rmtree, copyfile
 
-from gen_configs import read_addr
+import csv
+import datetime
 from influxdb import InfluxDBClient
+
+from gen_configs import read_addr
 from scoring.score_run import load_goals, score_run
 
 NUM_ROUNDS = 1000
@@ -101,20 +102,18 @@ def prepare_round():
     os.mkdir(os.path.join(CUR_ROUND_DIR, "source"))
     os.mkdir(os.path.join(CUR_ROUND_DIR, "sink"))
 
-    # Get the config with the teamname-source mappings.
+    # Add the defaults for the sources that were not used
     all_sources, _ = read_addr(SOURCES)
+    for cur_src in all_sources:
+        _create_empty_entry(cur_src)
+
+    # Get the config with the teamname-source mappings.
     config_name = os.path.join(CONFIGS_DIR, f"config_round_{cur_round}.csv")
     with open(config_name, 'r') as infile:
         reader = csv.reader(infile)
         for row in reader:
             move_code_to_source(row[0], row[1])
             _prepare_config_run(row[1], row[2], row[3])
-            try:
-                all_sources.remove(row[1])  # Remove the machine from the list
-            except ValueError:
-                print("Machine already considered")
-    for leftover in all_sources:
-        _create_empty_entry(leftover)
 
 
 def _prepare_config_run(src, dst, nbytes):
@@ -136,19 +135,19 @@ def _create_empty_entry(source):
                                  SOURCE_SUBDIR,
                                  source))
 
-    dst = os.path.join(CUR_ROUND_DIR,
-                       SOURCE_SUBDIR,
-                       source,
-                       f"{SUBMIT_NAME}.py")
-    with open(dst, 'w') as outfile:
+    dst_code = os.path.join(CUR_ROUND_DIR,
+                            SOURCE_SUBDIR,
+                            source,
+                            f"{SUBMIT_NAME}.py")
+    with open(dst_code, 'w') as outfile:
         outfile.write(NULL_CODE)
 
-    dst = os.path.join(CUR_ROUND_DIR,
-                       SOURCE_SUBDIR,
-                       source,
-                       f"{ROUND_CONFIG}")
-    with open(dst, 'w') as outfile:
-        outfile.write("\n")
+    dst_conf = os.path.join(CUR_ROUND_DIR,
+                            SOURCE_SUBDIR,
+                            source,
+                            f"{ROUND_CONFIG}")
+    with open(dst_conf, 'w') as outfile:
+        outfile.write("")
 
 
 def move_code_to_source(teamname, source):
@@ -162,18 +161,14 @@ def move_code_to_source(teamname, source):
     """
     team_code_dir = os.path.join(TEAMS_DIR, teamname, CODE_SUBDIR)
     recent_code = most_recent_timestamp(team_code_dir)
+    dst = os.path.join(CUR_ROUND_DIR,
+                       SOURCE_SUBDIR,
+                       source)
     if recent_code is not None:
-        # Copy the file over to the appropriate source
-        if not os.path.exists(os.path.join(CUR_ROUND_DIR,
-                                           SOURCE_SUBDIR,
-                                           source)):
-            os.makedirs(os.path.join(CUR_ROUND_DIR, SOURCE_SUBDIR, source))
-        dst = os.path.join(CUR_ROUND_DIR,
-                           SOURCE_SUBDIR,
-                           source,
-                           f"{SUBMIT_NAME}.py")
-        copyfile(os.path.join(team_code_dir, recent_code), dst)
-
+        dst_file = os.path.join(dst, f"{SUBMIT_NAME}.py")
+        copyfile(os.path.join(team_code_dir, recent_code), dst_file)
+    else:
+        raise RuntimeError(f"There is no submission code in {team_code_dir}")
 
 def get_last_round_num():
     round_names = os.listdir(ROUNDS_DIR)
@@ -230,7 +225,7 @@ def finish_round():
 
 
 def machine2team(cur_round):
-    """Compute the map from teams to machines."""
+    """Compute the map from machines to teams."""
     # Get the config with the teamname-source mappings.
     config_name = f"configs/config_round_{cur_round}.csv"
     machine_team = {}
@@ -240,6 +235,16 @@ def machine2team(cur_round):
             machine_team[row[1]] = row[0]
     return machine_team
 
+def team2machine(cur_round):
+    """Compute the map from teams to machines."""
+    # Get the config with the teamname-source mappings.
+    config_name = f"configs/config_round_{cur_round}.csv"
+    team_machine = {}
+    with open(config_name, 'r') as infile:
+        reader = csv.reader(infile)
+        for row in reader:
+            team_machine[row[0]] = row[1]
+    return team_machine
 
 def _push_to_influxdb(teamscores, round_n):
     points = _create_point_list(teamscores, round_n)
