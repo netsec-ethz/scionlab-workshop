@@ -13,4 +13,4 @@ Documentation lives in [the wiki](https://github.com/netsec-ethz/scionlab-worksh
 # Materials
 
 * Intro slides about SCION that tell the participants enough to understand what they're doing: https://kamila.is/talking/scion/viscon19/
-* Slides that explain the game itself: TODO :D
+* Slides that explain the game itself: `/presentation`
