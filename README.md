@@ -1,6 +1,6 @@
-# SCIONLab path control workshop/hackathon
+# SCIONLab path control game
 
-This repo contains the infrastructure, API, and example code for the SCION path control workshop for VIScon 2019.
+This repo contains the infrastructure, API, and example code for the SCION path control game/workshop/hackathon/thingy for VIScon 2019.
 
 The aim of the workshop is to enable participants to program bots that make use of SCION path control (path selection and multipath) and send data across the real planet-wide SCIONLab network.
 
