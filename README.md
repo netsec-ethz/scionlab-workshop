@@ -9,3 +9,8 @@ Users write code that uses a simplified SCION paths API. This code is then run o
 # How this works
 
 Documentation lives in [the wiki](https://github.com/netsec-ethz/scionlab-workshop/wiki/). Start with [Architecture](https://github.com/netsec-ethz/scionlab-workshop/wiki/Architecture).
+
+# Materials
+
+* Intro slides about SCION that tell the participants enough to understand what they're doing: https://kamila.is/talking/scion/viscon19/
+* Slides that explain the game itself: TODO :D
