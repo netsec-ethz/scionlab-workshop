@@ -1,5 +1,9 @@
 """Rudimentary Python API for SCION: wraps a simplified Go API.
 
+To use this, you need to build scion_api.go, which will give you a .so that
+this file provides bindings for. Place both the .so and this file into the same
+directory, somewhere in your Python path (e.g. into .).
+
 The API consists of:
 - set_log_level(level)
 - init()
