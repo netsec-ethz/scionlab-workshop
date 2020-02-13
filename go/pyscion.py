@@ -1,3 +1,17 @@
+"""Rudimentary Python API for SCION: wraps a simplified Go API.
+
+The API consists of:
+- set_log_level(level)
+- init()
+- addr = local_address()
+- paths = get_paths(destination)
+- fd = connect(destination, path)
+- fd.close()
+- fd.write(buffer)
+- fd = listen(port)
+- addr, n = fd.read(buffer)
+"""
+
 __all__ = ['SCIONException', 'HostInfo', 'FwdPathMeta', 'Interface', 'Path', 'connect',
     'set_log_level', 'init', 'local_address', 'paths', 'listen']
 
@@ -229,3 +243,33 @@ def listen(port):
     conn = connect(None, None)
     conn.fd = int(fd.value)
     return conn
+
+
+def get_paths(destination, loop_till_have_paths=True):
+    """Returns a list of SCION Paths.
+
+    Warning: This function will change! However, using it with only the
+    destination (and leaving all other arguments default) will have the same
+    semantics, i.e. will block until it can return a non-empty list of paths to
+    the destination.
+
+    Getting paths in SCION can be async/non-blocking: if you pass
+    loop_till_have_paths=False, this function will return immediately with
+    whatever paths are in the cache right now. If this is the first time you're
+    looking up this destination, the cache may be empty (and this will return
+    []).
+
+    If loop_till_have_paths=True, this function will retry until it gets
+    at least one path. (Note that if the destination is unreachable, this will
+    loop forever!)
+
+    Ideally, this function would be able to distinguish between "no paths in
+    cache" and "unreachable". That is a TODO.
+    """
+    if not loop_till_have_paths: return paths(destination)
+
+    while True:
+        try:
+            return paths(destination)
+        except sci.SCIONException:
+            time.sleep(0.1)

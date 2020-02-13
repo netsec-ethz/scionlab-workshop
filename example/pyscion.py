@@ -4,7 +4,7 @@ The API consists of:
 - set_log_level(level)
 - init()
 - addr = local_address()
-- paths = paths(destination)
+- paths = get_paths(destination)
 - fd = connect(destination, path)
 - fd.close()
 - fd.write(buffer)
@@ -60,3 +60,7 @@ def paths(destination):
 
 def listen(port):
     return connect(None, None)
+
+
+def get_paths(destination, loop_till_have_paths=True):
+    return paths(destination)
