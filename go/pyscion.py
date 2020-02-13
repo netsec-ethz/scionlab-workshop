@@ -1,5 +1,23 @@
+"""Rudimentary Python API for SCION: wraps a simplified Go API.
+
+To use this, you need to build scion_api.go, which will give you a .so that
+this file provides bindings for. Place both the .so and this file into the same
+directory, somewhere in your Python path (e.g. into .).
+
+The API consists of:
+- set_log_level(level)
+- init()
+- addr = local_address()
+- paths = get_paths(destination)
+- fd = connect(destination, path)
+- fd.close()
+- fd.write(buffer)
+- fd = listen(port)
+- addr, n = fd.read(buffer)
+"""
+
 __all__ = ['SCIONException', 'HostInfo', 'FwdPathMeta', 'Interface', 'Path', 'connect',
-    'set_log_level', 'init', 'local_address', 'paths', 'listen']
+    'set_log_level', 'init', 'local_address', 'get_paths', 'listen']
 
 from ctypes import *
 from collections import namedtuple
@@ -164,7 +182,7 @@ _lib.Paths.argtypes = [POINTER(c_size_t), POINTER(POINTER(_PathReplyEntry)), POI
 _lib.Paths.restype = c_char_p
 _lib.FreePathsMemory.argtypes = [POINTER(_PathReplyEntry), c_size_t]
 _lib.FreePathsMemory.restype = c_char_p
-def paths(destination):
+def _call_paths(destination):
     paths_n = c_size_t()
     paths = (POINTER(_PathReplyEntry))()
     err = _lib.Paths(byref(paths_n), byref(paths), _str_to_cstr(destination))
@@ -229,3 +247,32 @@ def listen(port):
     conn = connect(None, None)
     conn.fd = int(fd.value)
     return conn
+
+
+def get_paths(destination, loop_till_have_paths=True):
+    """Returns a list of SCION Paths.
+
+    Warning: This function will change! However, using it with only the
+    destination (and leaving all other arguments default) will have the same
+    semantics, i.e. will block until it can return a non-empty list of paths to
+    the destination.
+
+    Getting paths in SCION can be async/non-blocking: if you pass
+    loop_till_have_paths=False, this function will return immediately with
+    whatever paths are in the cache right now. If this is the first time you're
+    looking up this destination, the cache may be empty (and this will return
+    []).
+
+    If loop_till_have_paths=True, this function will retry until it gets
+    at least one path. (Note that if the destination is unreachable, this will
+    loop forever!)
+
+    Ideally, this function would be able to distinguish between "no paths in
+    cache" and "unreachable". That is a TODO.
+    """
+    while True:
+        try:
+            return _call_paths(destination)
+        except SCIONException as e:
+            if not loop_till_have_paths:
+                raise e
