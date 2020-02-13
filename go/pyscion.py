@@ -17,7 +17,7 @@ The API consists of:
 """
 
 __all__ = ['SCIONException', 'HostInfo', 'FwdPathMeta', 'Interface', 'Path', 'connect',
-    'set_log_level', 'init', 'local_address', 'paths', 'listen']
+    'set_log_level', 'init', 'local_address', 'get_paths', 'listen']
 
 from ctypes import *
 from collections import namedtuple
@@ -182,7 +182,7 @@ _lib.Paths.argtypes = [POINTER(c_size_t), POINTER(POINTER(_PathReplyEntry)), POI
 _lib.Paths.restype = c_char_p
 _lib.FreePathsMemory.argtypes = [POINTER(_PathReplyEntry), c_size_t]
 _lib.FreePathsMemory.restype = c_char_p
-def paths(destination):
+def _call_paths(destination):
     paths_n = c_size_t()
     paths = (POINTER(_PathReplyEntry))()
     err = _lib.Paths(byref(paths_n), byref(paths), _str_to_cstr(destination))
@@ -270,10 +270,9 @@ def get_paths(destination, loop_till_have_paths=True):
     Ideally, this function would be able to distinguish between "no paths in
     cache" and "unreachable". That is a TODO.
     """
-    if not loop_till_have_paths: return paths(destination)
-
     while True:
         try:
-            return paths(destination)
-        except sci.SCIONException:
-            time.sleep(0.1)
+            return _call_paths(destination)
+        except SCIONException as e:
+            if not loop_till_have_paths:
+                raise e
